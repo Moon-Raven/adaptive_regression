@@ -25,8 +25,6 @@ def generate_dummy_data(N):
     return dummy_data
 
 def simulate_pbrc_stupid(input_data):
-    #return np.array([[1,2,3],[1,2,3],[1,2,4]]);
-    num_of_foci = 0
     dim = input_data.shape[1]
     N = input_data.shape[0]
     
@@ -56,6 +54,37 @@ def simulate_pbrc_stupid2(input_data):
 
     return res
 
+def simulate_pbrc_stupid3(input_data):
+    num_of_foci = 0
+    dim = input_data.shape[1]
+    N = input_data.shape[0]
+    
+    Z = 0
+    F = np.zeros(dim)
+    S = 0
+    z_old1 = np.zeros(dim)
+    z_old2 = np.zeros(dim)
+
+    res = np.empty(N)
+
+    for i in range(N):
+        z = input_data[i]
+
+        Z_new = LAMBDA*Z + 1
+        F_new = LAMBDA*F + LAMBDA*Z*(z_old1 - z_old2)
+        S_new = LAMBDA*S + 2*LAMBDA*(1-LAMBDA)*np.dot((z-z_old1),F_new)\
+               +LAMBDA*(1-LAMBDA)*np.dot(z-z_old1, z-z_old1)*Z_new
+
+        S = S_new
+        Z = Z_new
+        F = F_new
+        z_old2 = z_old1
+        z_old1 = z
+
+        res[i] = 1/(1+S_new)
+
+    return res
+
 def information_potential2(x, point_set):
     return 1/(1 + ewmsd2(x, point_set))
 
@@ -71,7 +100,6 @@ def ewmsd2(x, point_set):
             temp_sum += diff[j] ** 2
 
         scaling = LAMBDA**(N-i)
-
         total_sum += temp_sum * scaling
 
     return (1-LAMBDA) * total_sum
@@ -92,11 +120,7 @@ def ewmsd(x, point_set):
         for j in range(len(x)):
             temp_sum += diff[j] ** 2
 
-        # Check if scaling factor is below threshold
-        if(LAMBDA**(N-i) > THRESHOLD):
-            scaling = LAMBDA**(N-i)
-        else:
-            scaling = 0
+        scaling = LAMBDA**(N-i)
 
         total_sum += temp_sum * scaling
 
@@ -126,8 +150,13 @@ def print_info():
 def main():
     print_info()
     input_data = generate_dummy_data(DATA_NUM_POINTS)
-    pbrc_info = simulate_pbrc_stupid2(input_data)
-    display_results(pbrc_info)
+    pbrc_info3 = simulate_pbrc_stupid3(input_data)
+    pbrc_info1 = simulate_pbrc_stupid(input_data)
+
+    plt.plot(pbrc_info1, 'bo')
+    plt.plot(pbrc_info3, 'rx')
+    plt.show()
+    #display_results(pbrc_info)
 
 if __name__ == "__main__":
     main()
