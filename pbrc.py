@@ -1,4 +1,4 @@
-
+import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 import math
@@ -7,6 +7,7 @@ DATA_NUM_POINTS = 200;
 LAMBDA = 0.95
 THRESHOLD = 0.05
 DATA_TYPE = "sine"
+WINDOW_LENGTH = math.floor(math.log(THRESHOLD, LAMBDA))
 
 def generate_dummy_data(N):
     x = np.linspace(0, 2 * math.pi, N)
@@ -45,12 +46,18 @@ def simulate_pbrc_stupid2(input_data):
     res = np.empty(N)
 
     for i in range(N):
-        res[i] = information_potential(input_data[i], input_data[0:i])
+
+        if(i < WINDOW_LENGTH):
+            start_index = 0
+        else:
+            start_index = i - WINDOW_LENGTH
+
+        res[i] = information_potential2(input_data[i], input_data[start_index:i])
 
     return res
 
 def information_potential2(x, point_set):
-    return 1/(1 + ewmsd(x, point_set))
+    return 1/(1 + ewmsd2(x, point_set))
 
 def ewmsd2(x, point_set):
     N = len(point_set)
@@ -63,15 +70,12 @@ def ewmsd2(x, point_set):
         for j in range(len(x)):
             temp_sum += diff[j] ** 2
 
-        # Check if scaling factor is below threshold
-        if(LAMBDA**(N-i) > THRESHOLD):
-            scaling = LAMBDA**(N-i)
-        else:
-            scaling = 0
+        scaling = LAMBDA**(N-i)
 
         total_sum += temp_sum * scaling
 
     return (1-LAMBDA) * total_sum
+
 def display_results(info):
     print("Results:")
     for i in range(len(info)):
@@ -116,14 +120,13 @@ def information_potential(x, point_set):
     return 1/(1 + ewmsd(x, point_set))
 
 def print_info():
-    n = math.floor(math.log(THRESHOLD, LAMBDA))
     print("Number of points: " + str(DATA_NUM_POINTS))
-    print("Window length: " + str(n))
+    print("Window length: " + str(WINDOW_LENGTH))
 
 def main():
     print_info()
     input_data = generate_dummy_data(DATA_NUM_POINTS)
-    pbrc_info = simulate_pbrc_stupid(input_data)
+    pbrc_info = simulate_pbrc_stupid2(input_data)
     display_results(pbrc_info)
 
 if __name__ == "__main__":
