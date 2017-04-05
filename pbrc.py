@@ -3,17 +3,49 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 
-DATA_NUM_POINTS = 200;
-LAMBDA = 0.95
+XMAX = 6 * math.pi
+DATA_NUM_POINTS = 300;
+LAMBDA = 0.6
 DATA_TYPE = "sine"
+DISTANCE_THRESHOLD = 0.12
+LOG_LEVEL = 1
+
+def log(s, level):
+    if(level <= LOG_LEVEL):
+        print(s)
+
+# Assumes that foci cannot be removed, only added
+def make_foci_great_again(foci):
+    N = len(foci)
+    prev_m = 0
+    great_foci = []
+    for i in range(N):
+        f = foci[i]
+        m = len(f)
+
+        if(m > prev_m):
+            great_foci.append({"x":[], "y":[]})
+
+        for j in range(m):
+            great_foci[j]["x"].append(i)
+            great_foci[j]["y"].append(f[j])
+        prev_m = m
+
+    return great_foci
+
+def plot_great_foci(great_foci):
+    i = 0
+    for focus in great_foci:
+        plt.plot(focus["x"], focus["y"], "o", label = "focus{0:2}".format(i))
+        i += 1
 
 def generate_dummy_data(N):
-    x = np.linspace(0, 2 * math.pi, N)
+    x = np.linspace(0, XMAX, N)
     dummy_data = np.empty([N,1])
 
     if(DATA_TYPE == "sine"):
         big_sine = np.sin(x)
-        small_sine = 0.1 * np.sin(7 * x)        
+        small_sine = 0.1 * np.sin(3 * x)   
         dummy_data[:,0] = small_sine + big_sine
     elif(DATA_TYPE == "ramp"):
         half = math.floor(N/2)
@@ -33,12 +65,16 @@ def simulate_pbrc_stupid(input_data):
 
     return res
 
+def distance(z1, z2):
+    difference = z1 - z2;
+    return np.sqrt(np.dot(difference, difference))
+
 def simulate_pbrc(input_data):
     dim = input_data.shape[1]
     N = input_data.shape[0]
 
-    foci = [np.array([0]), np.array([1]), np.array([-1])]
-    old_foci_distances = [0, 0, 0]
+    foci = [np.array([0])]
+    old_foci_distances = [0] * len(foci)
     num_of_foci = len(foci)
 
     Z = 0
@@ -47,8 +83,11 @@ def simulate_pbrc(input_data):
     z_old1 = np.zeros(dim)
     z_old2 = np.zeros(dim)
 
-    point_ips = np.empty(N)
-    focus_ips = np.empty(N)
+    # Logging data
+    hist_num_of_foci = np.empty(N)
+    hist_current_ip = np.empty(N)
+    hist_foci = []
+    hist_foci_ips = []
 
     for i in range(N):
         # Obtain current feature vector
@@ -67,29 +106,44 @@ def simulate_pbrc(input_data):
         z_old1 = z
 
         current_ip = 1/(1+S_new)
-
-        
-
+      
         # Update information potential of all foci
         foci_ips = []
 
         for j in range(num_of_foci):
             new_distance = (1-LAMBDA)*np.dot(z-foci[j], z-foci[j]) + LAMBDA*old_foci_distances[j]
-            foci_ips.append(1/(1+new_distance))
-                
+            foci_ips.append(1/(1+new_distance))                
             old_foci_distances[j] = new_distance
+        
+        log("#{0:4}: Current ip: {1}, max ip is focus{2:2}: {3:2.2f}".format(i, current_ip, np.argmax(np.array(foci_ips)), max(foci_ips)), 2)
+        if((current_ip > foci_ips).any()):
+            ind = np.argmin(np.absolute(z-foci))
 
-        if((z > foci_ips).any()):
-            #print("Neko je veci!")
-            pass
+            log("#{0:4}: Distance {1} to nearest focus{2:2}({3}) is {4:2.2f}".format(i, z, ind, foci[ind], \
+                distance(z, foci[ind])), 2)
 
-        print("#{0:3} Current ip: {1:4.2f}; focus ip : {2:4.2f}".format(i, current_ip, foci_ips[0]))
+            if(distance(z, foci[ind]) < DISTANCE_THRESHOLD):
+                log("#{2:4}: Changing focus{0:2} to {1}".format(ind, z, i), 2)
+                foci[ind] = z
+            else:
+                foci.append(z)
+                old_foci_distances.append(0)
+                num_of_foci += 1
+                log("#{2:4}: ADDING focus{0:2} at {1}".format(num_of_foci-1, z, i), 1)
 
-        point_ips[i] = current_ip
-        focus_ips[i] = foci_ips[-1]
+        # Log data
+        hist_current_ip[i] = current_ip
+        hist_num_of_foci[i] = num_of_foci
+        hist_foci.append(list(foci))
+        hist_foci_ips.append(foci_ips)
 
+    # Display results
+    plt.plot(input_data, 'b', label="Input data")
+    #plt.plot(hist_current_ip, 'r', label = "Current IP")
+    plot_great_foci(make_foci_great_again(hist_foci))
     plt.legend()
     plt.show()
+
     return 0
 
 def display_results(info):
