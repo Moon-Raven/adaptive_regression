@@ -12,8 +12,9 @@ def print_msd_and_ip(x, Z):
 #print(str(pbrc.msd([1,2,3], Z)) + ", should be " + str(46/3) + ";")
 #print("Information potential is " + str(pbrc.information_potential([1,2,3], Z)))
 
-Z = np.array([[1,1,1],
-              [3,3,3]])
-x = [2,2,2]
+#Z = np.array([[1,1,1],
+#              [3,3,3]])
+#x = [2,2,2]
 
-print_msd_and_ip(x,Z)
+#print_msd_and_ip(x,Z)
+
