@@ -1,4 +1,3 @@
-import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 import math
@@ -14,7 +13,34 @@ def log(s, level):
     if(level <= LOG_LEVEL):
         print(s)
 
-# Assumes that foci cannot be removed, only added
+def generate_dummy_data(N):
+    x = np.linspace(0, XMAX, N)
+    dummy_data = np.empty([N,1])
+
+    if(DATA_TYPE == "sine"):
+        big_sine = np.sin(x)
+        small_sine = 0.1 * np.sin(3 * x)   
+        dummy_data[:,0] = small_sine + big_sine
+    elif(DATA_TYPE == "ramp"):
+        half = math.floor(N/2)
+        dummy_data[0:half,0] = x[0:half]
+        dummy_data[half:,0] = x[half]
+
+    return dummy_data
+
+# Simulates the pbrc algorithm non-recursively
+def simulate_pbrc_stupid(input_data):
+    dim = input_data.shape[1]
+    N = input_data.shape[0]
+    
+    res = np.empty(N)
+
+    for i in range(N):
+        res[i] = information_potential(input_data[i], input_data[0:i])
+
+    return res
+
+# Prepares the foci data structure for plotting
 def make_foci_great_again(foci):
     N = len(foci)
     prev_m = 0
@@ -33,42 +59,19 @@ def make_foci_great_again(foci):
 
     return great_foci
 
+# Plots the foci data structure created by 'make_foci_great_again'
 def plot_great_foci(great_foci):
     i = 0
     for focus in great_foci:
         plt.plot(focus["x"], focus["y"], "o", label = "focus{0:2}".format(i))
         i += 1
 
-def generate_dummy_data(N):
-    x = np.linspace(0, XMAX, N)
-    dummy_data = np.empty([N,1])
-
-    if(DATA_TYPE == "sine"):
-        big_sine = np.sin(x)
-        small_sine = 0.1 * np.sin(3 * x)   
-        dummy_data[:,0] = small_sine + big_sine
-    elif(DATA_TYPE == "ramp"):
-        half = math.floor(N/2)
-        dummy_data[0:half,0] = x[0:half]
-        dummy_data[half:,0] = x[half]
-
-    return dummy_data
-
-def simulate_pbrc_stupid(input_data):
-    dim = input_data.shape[1]
-    N = input_data.shape[0]
-    
-    res = np.empty(N)
-
-    for i in range(N):
-        res[i] = information_potential(input_data[i], input_data[0:i])
-
-    return res
-
+# Calculates the distance between two vectors using l2 norm        
 def distance(z1, z2):
     difference = z1 - z2;
     return np.sqrt(np.dot(difference, difference))
 
+# Simulates the pbrc algorithm recursively
 def simulate_pbrc(input_data):
     dim = input_data.shape[1]
     N = input_data.shape[0]
@@ -151,6 +154,7 @@ def display_results(info):
     for i in range(len(info)):
         print("#{0:3}: {1}".format(i, info[i]))
 
+# Calculates exponentially windowed mean square distance
 def ewmsd(x, point_set):
     N = len(point_set)
     total_sum = 0
