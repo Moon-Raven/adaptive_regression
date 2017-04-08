@@ -1,33 +1,36 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import math
+from mpl_toolkits.mplot3d import Axes3D
 
 # GRNN meta-parameters
 SIGMA = 0.8
+DIMENSIONS = 2
 
 def print_info():
     print("General Regression Neural Network")
     print("Sigma: " + str(SIGMA))
+    print("Dimensions: " + str(DIMENSIONS))
 
 # Initialize empty array of nodes
 def initialize_nodes():
-    return {"x":np.empty(0), "y": np.empty(0)}
+    return {"x":np.empty((0,DIMENSIONS)), "y": np.empty(0)}
 
 # Appends new node to the existing array of nodes
-def add_node(nodes, new_node):
-    nodes["x"] = np.append(nodes["x"], new_node[0])
-    nodes["y"] = np.append(nodes["y"], new_node[1])
+def add_node(nodes, new_x, new_y):
+    nodes["x"] = np.append(nodes["x"], [new_x], 0)
+    nodes["y"] = np.append(nodes["y"], new_y)
     return nodes
 
 # Add some test nodes
 def add_dummy_nodes(nodes):
-    nodes = add_node(nodes, [-2, 5])
-    nodes = add_node(nodes, [0, 2])
-    nodes = add_node(nodes, [2, 7])
+    nodes = add_node(nodes, [1,2], 2)
+    nodes = add_node(nodes, [2,3], 5)
+    nodes = add_node(nodes, [0,0], 4)
     return nodes
 
 # Returns the regression for a sample x
-def get_regression_sample(nodes, x):
+def get_regression_sample_loop(nodes, x):
 
     upper_sum = 0
     lower_sum = 0
@@ -45,6 +48,23 @@ def get_regression_sample(nodes, x):
 
     return upper_sum / lower_sum
 
+# Returns the regression for a sample x MULTIDIMENSIONAL
+def get_regression_sample(nodes, x):
+
+    arr_xi = nodes["x"]
+    arr_yi = nodes["y"]
+
+    distances = x - arr_xi
+
+    arr_Di = np.sum(distances * distances, 1)
+    arr_ex = np.exp(-arr_Di/(2*SIGMA**2))
+    
+    upper_sum = np.sum(arr_ex * arr_yi)
+    lower_sum = np.sum(arr_ex)
+
+    y = upper_sum / lower_sum
+
+    return y
 
 # Returns the regression for array of input variables x
 def get_regression_array(nodes, samples):
@@ -53,27 +73,16 @@ def get_regression_array(nodes, samples):
     y = np.empty(N)
 
     for i in range(N):
-        y[i] = get_regression_sample(nodes, samples[i])
+        y[i] = get_regression_sample2(nodes, samples[i])
 
     return y
-
-# Plots the dependence between input and output variables estimated by the GRNN
-def plot_regression(nodes):
-    xmin = -5
-    xmax = 5
-    steps = 10000
-    x = np.linspace(xmin, xmax, steps)
-    y = get_regression_array(nodes, x)
-    plt.plot(x, y)
-    plt.show()
-
 
 def main():
     print_info()
 
     nodes = initialize_nodes()
     nodes = add_dummy_nodes(nodes)
-    plot_regression(nodes)
+
 
 if __name__ == "__main__":
     main()
