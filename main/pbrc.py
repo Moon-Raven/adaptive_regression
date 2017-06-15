@@ -7,7 +7,7 @@ DATA_NUM_POINTS = 300;
 LAMBDA = 0.6
 DATA_TYPE = "sine"
 DISTANCE_THRESHOLD = 0.12
-LOG_LEVEL = 1
+LOG_LEVEL = 0
 
 def log(s, level):
     if(level <= LOG_LEVEL):
@@ -119,6 +119,7 @@ def simulate_pbrc(input_data):
             old_foci_distances[j] = new_distance
         
         log("#{0:4}: Current ip: {1}, max ip is focus{2:2}: {3:2.2f}".format(i, current_ip, np.argmax(np.array(foci_ips)), max(foci_ips)), 2)
+
         if((current_ip > foci_ips).any()):
             ind = np.argmin(np.absolute(z-foci))
 
@@ -140,15 +141,18 @@ def simulate_pbrc(input_data):
         hist_foci.append(list(foci))
         hist_foci_ips.append(foci_ips)
 
-    # Display results
+    # Return history of foci as simulation result. Other parameters can be added if needed
+    return hist_foci
+
+# Displays the results of pbrc simulation using foci history
+def display_pbrc_results(input_data, hist_foci):
     plt.plot(input_data, 'b', label="Input data")
     #plt.plot(hist_current_ip, 'r', label = "Current IP")
     plot_great_foci(make_foci_great_again(hist_foci))
     plt.legend()
     plt.show()
 
-    return 0
-
+# Old function, not used anymore
 def display_results(info):
     print("Results:")
     for i in range(len(info)):
@@ -197,8 +201,8 @@ def main():
     print_info()
 
     input_data = generate_dummy_data(DATA_NUM_POINTS)
-    pbrc_info = simulate_pbrc(input_data)
-    #display_results(pbrc_info)
+    hist_foci = simulate_pbrc(input_data)
+    display_pbrc_results(input_data, hist_foci)
 
 if __name__ == "__main__":
     main()

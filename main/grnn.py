@@ -82,7 +82,7 @@ def main():
 
     nodes = initialize_nodes()
     nodes = add_dummy_nodes(nodes)
-
+    print(get_regression_sample(nodes, [10, 10]))
 
 if __name__ == "__main__":
     main()
