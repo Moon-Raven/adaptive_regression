@@ -2,161 +2,137 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 
-XMAX = 6 * math.pi
-DATA_NUM_POINTS = 300;
+# Configuration
 LAMBDA = 0.6
-DATA_TYPE = "sine"
-DISTANCE_THRESHOLD = 0.12
+DISTANCE_THRESHOLD = 0.3
 LOG_LEVEL = 0
 
+# ********************* Configuration functions *********************
+
+def set_lambda(new_lambda):
+    global LAMBDA
+    LAMBDA = new_lambda
+
+def set_distance_threshold(new_threshold):
+    global DISTANCE_THRESHOLD
+    DISTANCE_THRESHOLD = new_threshold
+
+def set_log_level(new_log_level):
+    global LOG_LEVEL
+    LOG_LEVEL = new_log_level
+
+# *** End of configuration functions ***
+
+
+
+# ********************* Control *********************
+
+# Static/global control variables
+dim = 2
+foci = []
+old_foci_distances = []
+num_of_foci = 0
+
+Z = 0
+F = np.zeros(dim)
+S = 0
+z_old1 = np.zeros(dim)
+z_old2 = np.zeros(dim)
+
+# Add new focus
+def add_focus(z, starting_distance = 0):
+    global foci
+    global old_foci_distances
+    global num_of_foci
+
+    foci.append(z)
+    old_foci_distances.append(starting_distance)
+    num_of_foci += 1
+
+# Perform an iteration of PBRC
+def iterate(x):
+    global dim
+    global foci
+    global old_foci_distances
+    global num_of_foci
+    global Z
+    global F
+    global S
+    global z_old1
+    global z_old2
+
+    # Newly received feature vector
+    z = x
+
+    # Calculate the new information potential
+    Z_new = LAMBDA*Z + 1
+    F_new = LAMBDA*F + LAMBDA*Z*(z_old1 - z_old2)
+    S_new = LAMBDA*S + 2*LAMBDA*(1-LAMBDA)*np.dot((z-z_old1),F_new)\
+           +LAMBDA*(1-LAMBDA)*np.dot(z-z_old1, z-z_old1)*Z_new
+
+    # Update static variables
+    S = S_new
+    Z = Z_new
+    F = F_new        
+    z_old2 = z_old1
+    z_old1 = z
+
+    current_ip = 1/(1+S_new)
+
+    # Update information potential of all foci
+    foci_ips = []
+
+    for j in range(num_of_foci):
+        new_distance = (1-LAMBDA)*np.dot(z-foci[j], z-foci[j]) + LAMBDA*old_foci_distances[j]
+        foci_ips.append(1/(1+new_distance))                
+        old_foci_distances[j] = new_distance
+
+    # If current information potential is larger than any of foci ips, do something
+    if((current_ip > foci_ips).any()):
+
+        # Find index of closest focus
+        # Convert list of arrays to numpy matrix, should change
+        # foci to be matrix in the first place :(
+        np_foci = np.array(foci)
+        zmf = z-foci
+        z2 = np.power(zmf, 2)
+        z3 = np.sum(z2,axis=1)
+        z4 = np.sqrt(z3)
+        ind = np.argmin(z4)
+        log("Distance {0} to nearest focus{1:2}({2}) is {3:2.2f}".format(z, ind, foci[ind], \
+            distance(z, foci[ind])), 2)
+
+        # If it is close enough, update that focus
+        if(distance(z, foci[ind]) < DISTANCE_THRESHOLD):
+            log("Changing focus{0:2} to {1}".format(ind, z), 2)
+            foci[ind] = z
+
+        # If it is too far away, create new focus
+        else:
+            add_focus(z)
+            log("ADDING focus{0:2} at {1}".format(num_of_foci-1, z), 1)
+
+# *** End of control ***
+
+
+
+
+# ********************* Information fetching functions *********************
+
+def get_foci():
+    return foci
+
+# *** End of information fetching functions ***
+
+
+
+
+# ******************* Utility functions *********************
+
+# Performs the given log if it's level is high enough
 def log(s, level):
     if(level <= LOG_LEVEL):
         print(s)
-
-def generate_dummy_data(N):
-    x = np.linspace(0, XMAX, N)
-    dummy_data = np.empty([N,1])
-
-    if(DATA_TYPE == "sine"):
-        big_sine = np.sin(x)
-        small_sine = 0.1 * np.sin(3 * x)   
-        dummy_data[:,0] = small_sine + big_sine
-    elif(DATA_TYPE == "ramp"):
-        half = math.floor(N/2)
-        dummy_data[0:half,0] = x[0:half]
-        dummy_data[half:,0] = x[half]
-
-    return dummy_data
-
-# Simulates the pbrc algorithm non-recursively
-def simulate_pbrc_stupid(input_data):
-    dim = input_data.shape[1]
-    N = input_data.shape[0]
-    
-    res = np.empty(N)
-
-    for i in range(N):
-        res[i] = information_potential(input_data[i], input_data[0:i])
-
-    return res
-
-# Prepares the foci data structure for plotting
-def make_foci_great_again(foci):
-    N = len(foci)
-    prev_m = 0
-    great_foci = []
-    for i in range(N):
-        f = foci[i]
-        m = len(f)
-
-        if(m > prev_m):
-            great_foci.append({"x":[], "y":[]})
-
-        for j in range(m):
-            great_foci[j]["x"].append(i)
-            great_foci[j]["y"].append(f[j])
-        prev_m = m
-
-    return great_foci
-
-# Plots the foci data structure created by 'make_foci_great_again'
-def plot_great_foci(great_foci):
-    i = 0
-    for focus in great_foci:
-        plt.plot(focus["x"], focus["y"], "o", label = "focus{0:2}".format(i))
-        i += 1
-
-# Calculates the distance between two vectors using l2 norm        
-def distance(z1, z2):
-    difference = z1 - z2;
-    return np.sqrt(np.dot(difference, difference))
-
-# Simulates the pbrc algorithm recursively
-def simulate_pbrc(input_data):
-    dim = input_data.shape[1]
-    N = input_data.shape[0]
-
-    foci = [np.array([0])]
-    old_foci_distances = [0] * len(foci)
-    num_of_foci = len(foci)
-
-    Z = 0
-    F = np.zeros(dim)
-    S = 0
-    z_old1 = np.zeros(dim)
-    z_old2 = np.zeros(dim)
-
-    # Logging data
-    hist_num_of_foci = np.empty(N)
-    hist_current_ip = np.empty(N)
-    hist_foci = []
-    hist_foci_ips = []
-
-    for i in range(N):
-        # Obtain current feature vector
-        z = input_data[i]
-
-        # Calculate the new information potential
-        Z_new = LAMBDA*Z + 1
-        F_new = LAMBDA*F + LAMBDA*Z*(z_old1 - z_old2)
-        S_new = LAMBDA*S + 2*LAMBDA*(1-LAMBDA)*np.dot((z-z_old1),F_new)\
-               +LAMBDA*(1-LAMBDA)*np.dot(z-z_old1, z-z_old1)*Z_new
-
-        S = S_new
-        Z = Z_new
-        F = F_new        
-        z_old2 = z_old1
-        z_old1 = z
-
-        current_ip = 1/(1+S_new)
-      
-        # Update information potential of all foci
-        foci_ips = []
-
-        for j in range(num_of_foci):
-            new_distance = (1-LAMBDA)*np.dot(z-foci[j], z-foci[j]) + LAMBDA*old_foci_distances[j]
-            foci_ips.append(1/(1+new_distance))                
-            old_foci_distances[j] = new_distance
-        
-        log("#{0:4}: Current ip: {1}, max ip is focus{2:2}: {3:2.2f}".format(i, current_ip, np.argmax(np.array(foci_ips)), max(foci_ips)), 2)
-
-        if((current_ip > foci_ips).any()):
-            ind = np.argmin(np.absolute(z-foci))
-
-            log("#{0:4}: Distance {1} to nearest focus{2:2}({3}) is {4:2.2f}".format(i, z, ind, foci[ind], \
-                distance(z, foci[ind])), 2)
-
-            if(distance(z, foci[ind]) < DISTANCE_THRESHOLD):
-                log("#{2:4}: Changing focus{0:2} to {1}".format(ind, z, i), 2)
-                foci[ind] = z
-            else:
-                foci.append(z)
-                old_foci_distances.append(0)
-                num_of_foci += 1
-                log("#{2:4}: ADDING focus{0:2} at {1}".format(num_of_foci-1, z, i), 1)
-
-        # Log data
-        hist_current_ip[i] = current_ip
-        hist_num_of_foci[i] = num_of_foci
-        hist_foci.append(list(foci))
-        hist_foci_ips.append(foci_ips)
-
-    # Return history of foci as simulation result. Other parameters can be added if needed
-    return hist_foci
-
-# Displays the results of pbrc simulation using foci history
-def display_pbrc_results(input_data, hist_foci):
-    plt.plot(input_data, 'b', label="Input data")
-    #plt.plot(hist_current_ip, 'r', label = "Current IP")
-    plot_great_foci(make_foci_great_again(hist_foci))
-    plt.legend()
-    plt.show()
-
-# Old function, not used anymore
-def display_results(info):
-    print("Results:")
-    for i in range(len(info)):
-        print("#{0:3}: {1}".format(i, info[i]))
 
 # Calculates exponentially windowed mean square distance
 def ewmsd(x, point_set):
@@ -193,16 +169,15 @@ def msd(x, point_set):
 def information_potential(x, point_set):
     return 1/(1 + ewmsd(x, point_set))
 
-def print_info():
-    print("Number of points: " + str(DATA_NUM_POINTS))
-    print("Lambda: " + str(LAMBDA))
+# Calculates the distance between two vectors using l2 norm        
+def distance(z1, z2):
+    difference = z1 - z2;
+    return np.sqrt(np.dot(difference, difference))
 
-def main():
-    print_info()
+# *** End of utility functions ***
 
-    input_data = generate_dummy_data(DATA_NUM_POINTS)
-    hist_foci = simulate_pbrc(input_data)
-    display_pbrc_results(input_data, hist_foci)
 
-if __name__ == "__main__":
-    main()
+
+
+
+

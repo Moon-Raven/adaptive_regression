@@ -7,7 +7,7 @@ DATA_NUM_POINTS = 300;
 LAMBDA = 0.6
 DATA_TYPE = "sine"
 DISTANCE_THRESHOLD = 0.12
-LOG_LEVEL = 0
+LOG_LEVEL = 2
 
 def log(s, level):
     if(level <= LOG_LEVEL):
