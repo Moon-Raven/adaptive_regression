@@ -120,7 +120,7 @@ def simulate_pbrc(input_data):
         
         log("#{0:4}: Current ip: {1}, max ip is focus{2:2}: {3:2.2f}".format(i, current_ip, np.argmax(np.array(foci_ips)), max(foci_ips)), 2)
 
-        if((current_ip > foci_ips).any()):
+        if((current_ip > foci_ips).all()):
             ind = np.argmin(np.absolute(z-foci))
 
             log("#{0:4}: Distance {1} to nearest focus{2:2}({3}) is {4:2.2f}".format(i, z, ind, foci[ind], \

@@ -39,10 +39,10 @@ def test_pbrc():
     plt.show()
 
 def test_plant_and_pbrc():
-    N = 100
+    N = 1000
     dim = 2
     focus_history = np.zeros([dim, N])
-    pbrc.set_log_level(2)
+    pbrc.set_log_level(3)
 
     pbrc.add_focus([2,3])
     pbrc.add_focus([4,5])

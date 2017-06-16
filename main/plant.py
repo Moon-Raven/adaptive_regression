@@ -7,7 +7,7 @@ f2 = np.array([4,5])
 Y_PERIOD = 10
 counter = 0
 noise_amplitude = 0.1
-focus_switch_time = 50
+focus_switch_time = 500
 
 # Represents input vector as a function of time (counter is a form of time)
 def get_x(counter):

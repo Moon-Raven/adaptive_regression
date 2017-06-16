@@ -80,15 +80,17 @@ def iterate(x):
     current_ip = 1/(1+S_new)
 
     # Update information potential of all foci
-    foci_ips = []
+    foci_ips = np.zeros([num_of_foci])
 
     for j in range(num_of_foci):
         new_distance = (1-LAMBDA)*np.dot(z-foci[j], z-foci[j]) + LAMBDA*old_foci_distances[j]
-        foci_ips.append(1/(1+new_distance))                
+        foci_ips[j] = (1/(1+new_distance))                
         old_foci_distances[j] = new_distance
 
-    # If current information potential is larger than any of foci ips, do something
-    if((current_ip > foci_ips).any()):
+    # If current information potential is larger than IPs of all the foci, do something
+    if((current_ip > foci_ips).all()):
+
+        log("Current IP: {0}, IP of highest focus {1} is {2}".format(current_ip, max(foci_ips), np.argmax(foci_ips)), 2)
 
         # Find index of closest focus
         # Convert list of arrays to numpy matrix, should change
@@ -106,6 +108,7 @@ def iterate(x):
         if(distance(z, foci[ind]) < DISTANCE_THRESHOLD):
             log("Changing focus{0:2} to {1}".format(ind, z), 2)
             foci[ind] = z
+            old_foci_distances[ind] = 0
 
         # If it is too far away, create new focus
         else:
