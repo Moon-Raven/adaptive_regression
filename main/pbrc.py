@@ -122,6 +122,7 @@ def iterate(x):
 
 # ********************* Information fetching functions *********************
 
+# Returns all foci
 def get_foci():
     return foci
 

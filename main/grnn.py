@@ -7,49 +7,30 @@ from mpl_toolkits.mplot3d import Axes3D
 SIGMA = 0.8
 DIMENSIONS = 2
 
-def print_info():
-    print("General Regression Neural Network")
-    print("Sigma: " + str(SIGMA))
-    print("Dimensions: " + str(DIMENSIONS))
+# ********************* Configuration functions *********************
+def set_sigma(new_sigma):
+    global SIGMA
+    SIGMA = new_sigma
 
-# Initialize empty array of nodes
-def initialize_nodes():
-    return {"x":np.empty((0,DIMENSIONS)), "y": np.empty(0)}
+# *** End of configuration functions ***
+
+
+
+# ********************* Control *********************
+
+# Global/static variables
+nodes = {"x":np.empty((0,DIMENSIONS)), "y": np.empty(0)}
 
 # Appends new node to the existing array of nodes
-def add_node(nodes, new_x, new_y):
+def add_node(new_x, new_y):
+    global nodes
     nodes["x"] = np.append(nodes["x"], [new_x], 0)
     nodes["y"] = np.append(nodes["y"], new_y)
     return nodes
 
-# Add some test nodes
-def add_dummy_nodes(nodes):
-    nodes = add_node(nodes, [1,2], 2)
-    nodes = add_node(nodes, [2,3], 5)
-    nodes = add_node(nodes, [0,0], 4)
-    return nodes
-
 # Returns the regression for a sample x
-def get_regression_sample_loop(nodes, x):
-
-    upper_sum = 0
-    lower_sum = 0
-
-    for i in range(len(nodes["x"])):
-        xi = nodes["x"][i]
-        yi = nodes["y"][i]
-
-        distance = x - xi
-        Di = np.dot(distance, distance)
-        ex = math.exp(-Di/(2*SIGMA**2))
-
-        upper_sum += ex*yi
-        lower_sum += ex
-
-    return upper_sum / lower_sum
-
-# Returns the regression for a sample x MULTIDIMENSIONAL
-def get_regression_sample(nodes, x):
+def get_regression(x):
+    global nodes
 
     arr_xi = nodes["x"]
     arr_yi = nodes["y"]
@@ -66,23 +47,12 @@ def get_regression_sample(nodes, x):
 
     return y
 
-# Returns the regression for array of input variables x
-def get_regression_array(nodes, samples):
+# *** End of control ***
 
-    N = len(samples)
-    y = np.empty(N)
 
-    for i in range(N):
-        y[i] = get_regression_sample2(nodes, samples[i])
+# ********************* Information fetching functions *********************
 
-    return y
+def get_nodes():
+    return nodes
 
-def main():
-    print_info()
-
-    nodes = initialize_nodes()
-    nodes = add_dummy_nodes(nodes)
-    print(get_regression_sample(nodes, [10, 10]))
-
-if __name__ == "__main__":
-    main()
+# *** End of information fetching functions ***
