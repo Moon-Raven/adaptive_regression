@@ -1,26 +1,54 @@
 import numpy as np
-from random import uniform
+import random
 
 f1 = np.array([2,3])
 f2 = np.array([4,5])
 
 Y_PERIOD = 10
 counter = 0
-noise_amplitude = 0.1
+noise_amplitude = 0.05
 focus_switch_time = 500
+
+plant_type = '5_foci_array'
+#random_2_foci
+#switch
+#5_foci_array
 
 # Represents input vector as a function of time (counter is a form of time)
 def get_x(counter):
 
     # Uniform noise
-    noise = uniform(-noise_amplitude, +noise_amplitude)
+    noise = random.uniform(-noise_amplitude, +noise_amplitude)
 
-    if(counter < focus_switch_time):
-        active_focus = f1
-    else:
-        active_focus = f2
+    if plant_type == 'switch':
+        if(counter < focus_switch_time):
+            x = f1
+        else:
+            x = f2
 
-    return active_focus + noise
+    elif plant_type == 'random_2_foci':
+        active_focus = random.choice([f1, f2])
+
+    elif plant_type == '5_foci_array':
+        segment_len = 100
+        segment_num = 4
+        max_val = 4
+        min_val = 0
+
+        counter = counter % (segment_num*segment_len)
+        i = counter % segment_len
+
+        if counter < 1*segment_len:
+            x = min_val
+        elif counter < 2*segment_len:
+            x = (max_val-min_val) * i/segment_len
+        elif counter < 3*segment_len:
+            x = max_val
+        elif counter < 4*segment_len:
+            x = max_val - (max_val-min_val) * i/segment_len
+        x = np.array([x,x])
+        
+    return x + noise
 
 # Calculates plant output for the given plant input
 def get_y(x):

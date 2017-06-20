@@ -5,7 +5,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 # GRNN meta-parameters
 SIGMA = 0.8
-DIMENSIONS = 2
+DIMENSIONS = 5
 
 # ********************* Configuration functions *********************
 def set_sigma(new_sigma):
@@ -31,6 +31,10 @@ def add_node(new_x, new_y):
 # Returns the regression for a sample x
 def get_regression(x):
     global nodes
+
+    # If network doesn't have any nodes yet
+    if len(nodes) == 0:
+        return 0
 
     arr_xi = nodes["x"]
     arr_yi = nodes["y"]

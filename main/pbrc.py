@@ -84,7 +84,7 @@ def iterate(x):
 
     for j in range(num_of_foci):
         new_distance = (1-LAMBDA)*np.dot(z-foci[j], z-foci[j]) + LAMBDA*old_foci_distances[j]
-        foci_ips[j] = (1/(1+new_distance))                
+        foci_ips[j] = distance2ip(new_distance)                
         old_foci_distances[j] = new_distance
 
     # If current information potential is larger than IPs of all the foci, do something
@@ -126,6 +126,11 @@ def iterate(x):
 def get_foci():
     return foci
 
+def get_foci_ips():
+    np_distances = np.array(old_foci_distances)
+    foci_ips = np.apply_along_axis(distance2ip, 0, np_distances)
+    return foci_ips
+    
 # *** End of information fetching functions ***
 
 
@@ -178,6 +183,8 @@ def distance(z1, z2):
     difference = z1 - z2;
     return np.sqrt(np.dot(difference, difference))
 
+def distance2ip(focus_distance):
+    return (1/(1+focus_distance))
 # *** End of utility functions ***
 
 
