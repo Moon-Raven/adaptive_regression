@@ -213,11 +213,12 @@ def plot_plant(n):
 
 def test_5_foci():
     foci_num = 5
-    N = 4000
+    N = 10000
     estimated_y_array = np.zeros(N)
     real_y_t = []
     real_y = []
     pbrc.set_distance_threshold(0.5)
+    pbrc.set_log_level(0)
     grnn.set_sigma(0.5)
     for i in range(foci_num):
         pbrc.add_focus(np.array([i,i]))
@@ -225,7 +226,7 @@ def test_5_foci():
     
     for i in range(N):
         data = plant.get_next_data()
-        x = data['x']
+        x = data['x']    
         y = data['y']
 
         pbrc.iterate(x)
@@ -237,20 +238,13 @@ def test_5_foci():
             grnn.add_node(foci_ips, y)
 
         estimated_y = grnn.get_regression(foci_ips)
-        estimated_y_array[i] = estimated_y
         logger.collect_data()
 
     logger.plot_foci_num()
     logger.plot_y()
     logger.plot_node_num()
+    logger.plot_foci_x()
     plt.show()
-    #axes = plt.gca()
-    #plt.grid(True)
-    #t = np.arange(0, N)
-    #plt.plot(estimated_y_array)
-    #plt.plot(real_y_t, real_y, 'o')
-    #plt.show()
-
 
 def main():
     #test_plant()

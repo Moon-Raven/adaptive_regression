@@ -106,7 +106,7 @@ def iterate(x):
 
         # If it is close enough, update that focus
         if(distance(z, foci[ind]) < DISTANCE_THRESHOLD):
-            log("Changing focus{0:2} to {1}".format(ind, z), 2)
+            log("Changing focus{0:2} from {1} to {2}".format(ind, foci[ind], z), 2)
             foci[ind] = z
             old_foci_distances[ind] = 0
 
@@ -130,7 +130,7 @@ def get_foci_ips():
     np_distances = np.array(old_foci_distances)
     foci_ips = np.apply_along_axis(distance2ip, 0, np_distances)
     return foci_ips
-    
+
 # *** End of information fetching functions ***
 
 
