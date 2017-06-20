@@ -9,6 +9,8 @@ counter = 0
 noise_amplitude = 0.05
 focus_switch_time = 500
 
+last_data = None
+
 plant_type = '5_foci_array'
 #random_2_foci
 #switch
@@ -47,7 +49,7 @@ def get_x(counter):
         elif counter < 4*segment_len:
             x = max_val - (max_val-min_val) * i/segment_len
         x = np.array([x,x])
-        
+
     return x + noise
 
 # Calculates plant output for the given plant input
@@ -55,9 +57,14 @@ def get_y(x):
     alpha = np.array([10, 1])
     return np.dot(x, alpha)
 
+# Fetches last plant data
+def get_last_data():
+    return last_data
+
 # Always fetches input vector of plant, and fetches output vector if period has expired
 def get_next_data():
     global counter
+    global last_data
 
     # Get input vector
     x = get_x(counter)
@@ -71,4 +78,7 @@ def get_next_data():
     # Tracking counter because of period
     counter += 1
 
-    return {'x' : x, 'y': y}    
+    data = {'x' : x, 'y': y}
+    last_data = data
+
+    return data

@@ -28,9 +28,12 @@ def add_node(new_x, new_y):
     nodes["y"] = np.append(nodes["y"], new_y)
     return nodes
 
+last_regression = None
+
 # Returns the regression for a sample x
 def get_regression(x):
     global nodes
+    global last_regression
 
     # If network doesn't have any nodes yet
     if len(nodes) == 0:
@@ -48,6 +51,7 @@ def get_regression(x):
     lower_sum = np.sum(arr_ex)
 
     y = upper_sum / lower_sum
+    last_regression = y
 
     return y
 
@@ -58,5 +62,11 @@ def get_regression(x):
 
 def get_nodes():
     return nodes
+
+def get_last_regression():
+    return last_regression
+
+def get_node_num():
+    return nodes['x'].shape[0]
 
 # *** End of information fetching functions ***
