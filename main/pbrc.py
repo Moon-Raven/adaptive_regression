@@ -90,7 +90,8 @@ def iterate(x):
     # If current information potential is larger than IPs of all the foci, do something
     if((current_ip > foci_ips).all()):
 
-        log("Current IP: {0}, IP of highest focus {1} is {2}".format(current_ip, max(foci_ips), np.argmax(foci_ips)), 2)
+        if len(foci_ips) != 0:
+            log("Current IP: {0}, IP of highest focus {1} is {2}".format(current_ip, max(foci_ips), np.argmax(foci_ips)), 2)
 
         # Find index of closest focus
         # Convert list of arrays to numpy matrix, should change

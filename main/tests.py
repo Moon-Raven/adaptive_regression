@@ -246,6 +246,62 @@ def test_5_foci():
     logger.plot_foci_x()
     plt.show()
 
+def plot_grnn_1d(start, end):
+    N = 1000
+    x = np.linspace(start, end, N)
+    y = np.empty(len(x))
+    for i in range(N):
+        y[i] = grnn.get_regression(x[i])
+
+    plt.plot(x, y)
+    plt.title("GRNN output")
+    plt.show()
+
+def test_dynamic_grnn():
+    x1 = np.array([0])
+    y1 = 0
+    x2 = np.array([5])
+    y2 = 5
+
+    x3 = np.array([2.5, 2.5])
+    y3 = -5
+
+    grnn.add_node(x1, y1)
+    grnn.add_node(x2, y2)    
+    grnn.add_node(x3, y3)  
+
+    plot_grnn_1d(-1, 6)
+    #print(grnn.get_regression(np.array([4, 2])))
+
+def test_dynamic_system1():
+    N = 20000
+    pbrc.set_distance_threshold(0.325)
+    pbrc.set_log_level(0)
+    grnn.set_sigma(0.5)
+    
+    for i in range(5):
+        pbrc.add_focus(np.array([i,i]))
+
+    for i in range(N):
+        data = plant.get_next_data()
+        x = data['x']    
+        y = data['y']
+
+        pbrc.iterate(x)
+        foci_ips = pbrc.get_foci_ips()
+
+        if y != None:
+            grnn.add_node(foci_ips, y)
+
+        estimated_y = grnn.get_regression(foci_ips)
+        logger.collect_data()
+
+    logger.plot_foci_num()
+    logger.plot_y()
+    logger.plot_node_num()
+    logger.plot_foci_x()
+    plt.show()
+
 def main():
     #test_plant()
     #test_pbrc()
@@ -256,7 +312,9 @@ def main():
     #test_plant_and_pbrc_ips()
     #test_full_1()
     #plot_plant(1000)
-    test_5_foci()
+    #test_5_foci()
+    #test_dynamic_grnn()
+    test_dynamic_system1()
 
 if __name__ == "__main__":
     main()
