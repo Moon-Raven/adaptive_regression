@@ -31,6 +31,7 @@ def set_log_level(new_log_level):
 dim = 2
 foci = []
 old_foci_distances = []
+original_foci_positions = []
 num_of_foci = 0
 
 Z = 0
@@ -47,7 +48,13 @@ def add_focus(z, starting_distance = 0):
 
     foci.append(z)
     old_foci_distances.append(starting_distance)
+    original_foci_positions.append(z)
+    
     num_of_foci += 1
+
+# Resets the focus with the given index back to its original position
+def reset_focus(ind):
+    foci[ind] = original_foci_positions[ind]
 
 # Perform an iteration of PBRC
 def iterate(x):
@@ -105,16 +112,30 @@ def iterate(x):
         log("Distance {0} to nearest focus{1:2}({2}) is {3:2.2f}".format(z, ind, foci[ind], \
             distance(z, foci[ind])), 2)
 
-        # If it is close enough, update that focus
-        if(distance(z, foci[ind]) < DISTANCE_THRESHOLD):
+        # If it is close enough to the original focus position, update that focus
+        if(distance(z, original_foci_positions[ind]) < DISTANCE_THRESHOLD):
             log("Changing focus{0:2} from {1} to {2}".format(ind, foci[ind], z), 2)
             foci[ind] = z
             old_foci_distances[ind] = 0
 
-        # If it is too far away, create new focus
-        else:
-            add_focus(z)
-            log("ADDING focus{0:2} at {1}".format(num_of_foci-1, z), 1)
+        # If it is too far away, reset that focus, check other close foci
+        else:            
+            log("RESETTING focus{0:2} from {1} back to {2}".format(ind, foci[ind], original_foci_positions[ind]), 1)
+            reset_focus(ind)
+
+            legit_foci_ind = [ind for ind in range(len(foci)) if distance(original_foci_positions[ind], z) < DISTANCE_THRESHOLD]
+            
+            if len(legit_foci_ind) == 0:
+                log("ADDING focus{0:2} at {1}".format(num_of_foci-1, z), 1)
+                add_focus(z)
+            else:
+                vals = [distance(z, foci[i]) for i in legit_foci_ind]
+                xxx = np.array(vals)
+                min_ind = np.argmin(xxx)
+                min_foci_ind = legit_foci_ind[min_ind]
+                log("Changing focus{0:2} from {1} to {2}".format(ind, foci[ind], z), 2)
+                foci[min_foci_ind] = z
+                old_foci_distances[min_foci_ind] = 0
 
 # *** End of control ***
 

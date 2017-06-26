@@ -213,7 +213,7 @@ def plot_plant(n):
 
 def test_5_foci():
     foci_num = 5
-    N = 10000
+    N = 20000
     estimated_y_array = np.zeros(N)
     real_y_t = []
     real_y = []
@@ -274,7 +274,7 @@ def test_dynamic_grnn():
     #print(grnn.get_regression(np.array([4, 2])))
 
 def test_dynamic_system1():
-    N = 20000
+    N = 4000
     pbrc.set_distance_threshold(0.325)
     pbrc.set_log_level(0)
     grnn.set_sigma(0.5)

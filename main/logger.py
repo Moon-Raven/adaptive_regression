@@ -65,6 +65,7 @@ def plot_y():
     plt.legend()
     plt.xlabel('Time')
     plt.ylabel('Output value')
+    plt.grid()
     plt.draw()
 
 def plot_node_num():
@@ -91,4 +92,5 @@ def plot_foci_x():
     plt.legend()
     plt.xlabel('Time')
     plt.ylabel('Focus coordinate value')
+    plt.grid()
     plt.draw()
