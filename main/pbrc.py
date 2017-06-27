@@ -49,7 +49,7 @@ def add_focus(z, starting_distance = 0):
     foci.append(z)
     old_foci_distances.append(starting_distance)
     original_foci_positions.append(z)
-    
+
     num_of_foci += 1
 
 # Resets the focus with the given index back to its original position
@@ -71,6 +71,9 @@ def iterate(x):
     # Newly received feature vector
     z = x
 
+    if num_of_foci == 0:
+        add_focus(x)
+        return
     # Calculate the new information potential
     Z_new = LAMBDA*Z + 1
     F_new = LAMBDA*F + LAMBDA*Z*(z_old1 - z_old2)

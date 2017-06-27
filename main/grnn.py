@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import math
 from mpl_toolkits.mplot3d import Axes3D
 
+from timeit import default_timer as timer
+
 # GRNN meta-parameters
 SIGMA = 0.8
 
@@ -37,7 +39,9 @@ def add_node(new_x, new_y):
 
 
 # Returns the regression for a sample x
+#@profile
 def get_regression(x):
+    t1 = timer()
     global nodes
     global last_regression
 
@@ -54,24 +58,36 @@ def get_regression(x):
         print("GRNN: len(x) < max_dim; Exiting...")
         exit()
 
+    
     arr_yi = nodes["y"]
 
     distances = np.zeros([node_num, max_dim])
 
+    t2 = timer()
     for i in range(node_num):
         x_i = nodes['x'][i]
-        for j in range(len(x_i)):
-            distances[i][j] = x[j] - x_i[j]
+        
+        #for j in range(len(x_i)):
+        #    distances[i][j] = x[j] - x_i[j]
 
+        ll = len(x_i)
+        distances[i][0:ll] = x[0:ll] - x_i[0:ll]
+    t3 = timer()
+
+    #print(distances)
     arr_Di = np.sum(distances * distances, 1)
     arr_ex = np.exp(-arr_Di/(2*SIGMA**2))
+
+    t4 = timer()
 
     upper_sum = np.sum(arr_ex * arr_yi)
     lower_sum = np.sum(arr_ex)
 
+    t5 = timer()
     y = upper_sum / lower_sum
     last_regression = y
-
+    t6 = timer()
+    #print("1-2:{0}; 2-3:{1}; 3-4:{2}; 4-5:{3}; 5-6:{4}".format(t2-t1,t3-t2,t4-t3,t5-t4,t6-t5))    
     return y
 
 # *** End of control ***

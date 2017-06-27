@@ -2,6 +2,7 @@ import pbrc
 import grnn
 import plant
 import logger
+import random
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -302,7 +303,34 @@ def test_dynamic_system1():
     logger.plot_foci_x()
     plt.show()
 
+def test_dynamic_system_0_foci():
+    N = 10000
+    pbrc.set_distance_threshold(0.5)
+    pbrc.set_log_level(0)
+    grnn.set_sigma(0.5)
+
+    for i in range(N):
+        data = plant.get_next_data()
+        x = data['x']    
+        y = data['y']
+
+        pbrc.iterate(x)
+        foci_ips = pbrc.get_foci_ips()
+
+        if y != None:
+            grnn.add_node(foci_ips, y)
+
+        estimated_y = grnn.get_regression(foci_ips)
+        logger.collect_data()
+
+    logger.plot_foci_num()
+    logger.plot_y()
+    logger.plot_node_num()
+    logger.plot_foci_x()
+    plt.show()
+
 def main():
+    random.seed(0)
     #test_plant()
     #test_pbrc()
     #test_plant_and_pbrc()
@@ -314,7 +342,8 @@ def main():
     #plot_plant(1000)
     #test_5_foci()
     #test_dynamic_grnn()
-    test_dynamic_system1()
+    #test_dynamic_system1()
+    test_dynamic_system_0_foci()
 
 if __name__ == "__main__":
     main()
