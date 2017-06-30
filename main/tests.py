@@ -304,7 +304,7 @@ def test_dynamic_system1():
     plt.show()
 
 def test_dynamic_system_0_foci():
-    N = 10000
+    N = 4000
     pbrc.set_distance_threshold(0.5)
     pbrc.set_log_level(0)
     grnn.set_sigma(0.5)

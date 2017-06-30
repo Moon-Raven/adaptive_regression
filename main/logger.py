@@ -79,18 +79,25 @@ def plot_node_num():
 def plot_foci_x():
     plt.figure()
 
+    plt_base_number = dim * 100 + 10
+
     for j in range(last_foci_num):
         x_axis = np.arange(foci_appearance_moments[j], i-1)
         y_axis = np.empty([i-1-foci_appearance_moments[j],dim])
+
         for k in range(foci_appearance_moments[j], i-1):
             y_axis[k - foci_appearance_moments[j]] = foci_positions[k][j]
 
         for k in range(dim):
+            plt.subplot(plt_base_number+k+1)
             plt.plot(x_axis,y_axis[:,0], label="focus #{0}_x{1}".format(j, k))
 
-    plt.title("Focus positions")
-    plt.legend()
-    plt.xlabel('Time')
-    plt.ylabel('Focus coordinate value')
-    plt.grid()
+    for k in range(dim):
+        plt.subplot(plt_base_number+k+1)        
+        plt.title("Dimension #{0}".format(k))
+        plt.legend()
+        plt.xlabel('Time')
+        plt.ylabel('Focus coordinate value')
+        plt.grid()
+
     plt.draw()
