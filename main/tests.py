@@ -325,7 +325,37 @@ def test_dynamic_system_0_foci():
 
     logger.plot_foci_num()
     logger.plot_y()
-    logger.plot_node_num()
+    #logger.plot_node_num()
+    logger.plot_foci_x()
+    plt.show()
+
+def test_freeze():
+    N = 4000
+    pbrc.set_distance_threshold(0.5)
+    pbrc.set_log_level(0)
+    grnn.set_sigma(0.5)
+
+    for i in range(N):
+
+        if i == 2000:
+            pbrc.freeze_foci()
+
+        data = plant.get_next_data()
+        x = data['x']    
+        y = data['y']
+
+        pbrc.iterate(x)
+        foci_ips = pbrc.get_foci_ips()
+
+        if y != None:
+            grnn.add_node(foci_ips, y)
+
+        estimated_y = grnn.get_regression(foci_ips)
+        logger.collect_data()
+
+    logger.plot_foci_num()
+    logger.plot_y()
+    #logger.plot_node_num()
     logger.plot_foci_x()
     plt.show()
 
@@ -343,7 +373,7 @@ def main():
     #test_5_foci()
     #test_dynamic_grnn()
     #test_dynamic_system1()
-    test_dynamic_system_0_foci()
-
+    #test_dynamic_system_0_foci()
+    test_freeze()
 if __name__ == "__main__":
     main()

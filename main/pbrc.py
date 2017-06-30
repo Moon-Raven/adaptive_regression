@@ -40,11 +40,11 @@ S = 0
 z_old1 = np.zeros(dim)
 z_old2 = np.zeros(dim)
 
+foci_frozen = False
+
 # Add new focus
 def add_focus(z, starting_distance = 0):
-    global foci
-    global old_foci_distances
-    global num_of_foci
+    global foci, old_foci_distances, num_of_foci
 
     foci.append(z)
     old_foci_distances.append(starting_distance)
@@ -56,17 +56,19 @@ def add_focus(z, starting_distance = 0):
 def reset_focus(ind):
     foci[ind] = original_foci_positions[ind]
 
+# Make foci unable to move
+def freeze_foci():
+    global foci_frozen
+    foci_frozen = True
+
+# Make foci able to move again
+def unfreeze_foci():
+    global foci_frozen
+    foci_frozen = False
+
 # Perform an iteration of PBRC
 def iterate(x):
-    global dim
-    global foci
-    global old_foci_distances
-    global num_of_foci
-    global Z
-    global F
-    global S
-    global z_old1
-    global z_old2
+    global dim, foci, old_foci_distances, num_of_foci, Z, F, S, z_old1, z_old2
 
     # Newly received feature vector
     z = x
@@ -74,6 +76,7 @@ def iterate(x):
     if num_of_foci == 0:
         add_focus(x)
         return
+
     # Calculate the new information potential
     Z_new = LAMBDA*Z + 1
     F_new = LAMBDA*F + LAMBDA*Z*(z_old1 - z_old2)
@@ -98,7 +101,7 @@ def iterate(x):
         old_foci_distances[j] = new_distance
 
     # If current information potential is larger than IPs of all the foci, do something
-    if((current_ip > foci_ips).all()):
+    if (current_ip > foci_ips).all() and foci_frozen == False:
 
         if len(foci_ips) != 0:
             log("Current IP: {0}, IP of highest focus {1} is {2}".format(current_ip, max(foci_ips), np.argmax(foci_ips)), 2)
