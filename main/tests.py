@@ -440,7 +440,7 @@ def test_plot():
     plot_estimation(-5,10,-5,10)
 
 def test_peaks():
-    N = 2500
+    N = 10404
     plant.set_y_period(5)
     plant.set_plant_type_x('zigzag')
     plant.set_plant_type_y('peaks')
