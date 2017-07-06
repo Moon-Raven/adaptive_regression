@@ -402,12 +402,28 @@ def get_real_function(x1, x2):
     real_y = real_y[:-1, :-1]
     return real_y
 
-def plot_estimation(x1min, x1max, x2min, x2max):
-    
+def get_mesh_grid(x1min, x1max, x2min, x2max, xnum=51):
+    x1len = x1max-x1min
+    x2len = x2max-x2min
+    dx1 = x1len/(xnum-1)
+    dx2 = x2len/(xnum-1)
     x1, x2 = np.mgrid[x1min:x1max + dx1:dx1, x2min:x2max + dx2:dx2]
+    return x1, x2
 
+def get_real_and_estimated_function(x1min, x1max, x2min, x2max):
+
+    x1, x2 = get_mesh_grid(x1min, x1max, x2min, x2max)
+
+    # Get data
     estimated_y = get_function_estimation(x1, x2)
     real_y = get_real_function(x1, x2)
+
+    return real_y, estimated_y
+
+def plot_estimation(x1min, x1max, x2min, x2max):
+
+    x1, x2 = get_mesh_grid(x1min, x1max, x2min, x2max)
+    real_y, estimated_y = get_real_and_estimated_function(x1min, x1max, x2min, x2max)
 
     # Prepare colours
     levels = MaxNLocator(nbins=100).tick_values(min(estimated_y.min(), real_y.min()), 
