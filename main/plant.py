@@ -31,11 +31,12 @@ def set_y_period(new_period):
     global Y_PERIOD
     Y_PERIOD = new_period
 
+def set_noise_amplitude(new_amplitude):
+    global noise_amplitude
+    noise_amplitude = new_amplitude
+
 # Represents input vector as a function of time (counter is a form of time)
 def get_x(counter):
-
-    # Uniform noise
-    noise = random.uniform(-noise_amplitude, +noise_amplitude)
 
     if plant_type_x == 'switch':
         if(counter < focus_switch_time):
@@ -85,18 +86,26 @@ def get_x(counter):
     return x + noise
 
 # Calculates plant output for the given plant input
-def get_y(x):
+def get_y(x, add_noise = True):
+
+    # Uniform noise
+    noise = random.uniform(-noise_amplitude, +noise_amplitude)
 
     if plant_type_y == 'linear':
         alpha = np.array([10, 1])
-        return np.dot(x, alpha)
+        y = np.dot(x, alpha)
 
     elif plant_type_y == 'peaks':
         x1 = x[0]
         x2 = x[1]
-        return 3 * (1-x1)**2 * np.exp(-(x1**2) - (x2+1)**2) \
+        y = 3 * (1-x1)**2 * np.exp(-(x1**2) - (x2+1)**2) \
                - 10 * (x1/5 - x1**3 - x2**5) * np.exp(-x1**2 - x2**2)\
                - 1/3 * np.exp(-(x1+1)**2 - x2**2)
+               
+    if add_noise == True:
+        return y + noise
+    else:
+        return y
 
 # Fetches last plant data
 def get_last_data():

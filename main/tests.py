@@ -369,54 +369,61 @@ def get_static_regression(x, iterations_in_place = 20):
     estimated_y = grnn.get_regression(foci_ips)
     return estimated_y
 
-def plot_estimation(x1min, x1max, x2min, x2max):
-    
+# Parameters should form a mesh grid
+def get_function_estimation(x1, x2):
     xnum = 51
-    x1len = x1max-x1min
-    x2len = x2max-x2min
 
-    dx1 = x1len/(xnum-1)
-    dx2 = x2len/(xnum-1)
-    #print(dx1)
-    #print(dx2)
-    x1, x2 = np.mgrid[x1min:x1max + dx1:dx1, x2min:x2max + dx2:dx2]
-    #print(np.max(x1))
-    #print(np.max(x2))
-    #print(x1)
-    #exit()
     sh = x1.shape
-    y = np.empty(sh)
-    y_real = np.empty(sh)
+    estimated_y = np.empty(sh)
 
     # Get regression at each input vector after spending some time at that vector
     pbrc.freeze_foci()
     for i in range(sh[0]):
         for j in range(sh[1]):
-            y[i,j] = get_static_regression(np.array([x1[i,j], x2[i,j]]))
-            y_real[i,j] = plant.get_y(np.array([x1[i,j], x2[i,j]]))
+            estimated_y[i,j] = get_static_regression(np.array([x1[i,j], x2[i,j]]))
 
     pbrc.unfreeze_foci()
 
     # Fix off-by-one
-    y = y[:-1, :-1]
-    y_real = y_real[:-1, :-1]
+    estimated_y = estimated_y[:-1, :-1]
+    return estimated_y
+
+# Parameters should form a mesh grid
+def get_real_function(x1, x2):
+
+    sh = x1.shape
+    real_y = np.empty(sh)
+
+    for i in range(sh[0]):
+        for j in range(sh[1]):
+            real_y[i,j] = plant.get_y(np.array([x1[i,j], x2[i,j]]), False)
+
+    # Fix off-by-one
+    real_y = real_y[:-1, :-1]
+    return real_y
+
+def plot_estimation(x1min, x1max, x2min, x2max):
+    
+    x1, x2 = np.mgrid[x1min:x1max + dx1:dx1, x2min:x2max + dx2:dx2]
+
+    estimated_y = get_function_estimation(x1, x2)
+    real_y = get_real_function(x1, x2)
 
     # Prepare colours
-    levels = MaxNLocator(nbins=100).tick_values(min(y.min(), y_real.min()), 
-                                                max(y.max(), y_real.max()))
+    levels = MaxNLocator(nbins=100).tick_values(min(estimated_y.min(), real_y.min()), 
+                                                max(estimated_y.max(), real_y.max()))
     cmap = plt.get_cmap('PiYG')
     norm = BoundaryNorm(levels, ncolors=cmap.N, clip=True)
 
     fig, (ax0, ax1) = plt.subplots(nrows=2)
     
-    im = ax0.pcolormesh(x1, x2, y, cmap=cmap, norm=norm)
+    im = ax0.pcolormesh(x1, x2, estimated_y, cmap=cmap, norm=norm)
     fig.colorbar(im, ax=ax0)
     ax0.set_title('Estimation of the function')
 
-    im = ax1.pcolormesh(x1, x2, y_real, cmap=cmap, norm=norm)
+    im = ax1.pcolormesh(x1, x2, real_y, cmap=cmap, norm=norm)
     fig.colorbar(im, ax=ax1)
     ax1.set_title('Real function')
-    #fig.tight_layout()
 
     plt.show()
 
@@ -447,6 +454,7 @@ def test_peaks():
     pbrc.set_distance_threshold(0.5)
     pbrc.set_log_level(0)
     grnn.set_sigma(0.3)
+    plant.set_noise_amplitude(10)
 
     for i in range(N):
         data = plant.get_next_data()
@@ -460,6 +468,29 @@ def test_peaks():
             grnn.add_node(foci_ips, y)
 
     plot_estimation(-3, 3, -3, 3)
+
+def plot_errors_peaks():
+    N = 10404
+    plant.set_y_period(5)
+    plant.set_plant_type_x('zigzag')
+    plant.set_plant_type_y('peaks')
+    pbrc.set_distance_threshold(0.5)
+    pbrc.set_log_level(0)
+    grnn.set_sigma(0.3)
+    plant.set_noise_amplitude(10)
+
+    for i in range(N):
+        data = plant.get_next_data()
+        x = data['x']    
+        y = data['y']
+
+        pbrc.iterate(x)
+        foci_ips = pbrc.get_foci_ips()
+
+        if y != None:
+            grnn.add_node(foci_ips, y)
+
+    #plot_estimation(-3, 3, -3, 3)
 
 def main():
     random.seed(0)
@@ -479,6 +510,7 @@ def main():
     #test_freeze()
     #test_plot()
     test_peaks()
+    #plot_errors_peaks()
 
 if __name__ == "__main__":
     main()
