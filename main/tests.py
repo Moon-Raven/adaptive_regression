@@ -318,7 +318,7 @@ def test_dynamic_system_0_foci():
     grnn.set_sigma(0.5)
     plant.set_plant_type_x('5_foci_array')
     plant.set_plant_type_y('linear')
-    
+
     for i in range(N):
         data = plant.get_next_data()
         x = data['x']    
@@ -335,7 +335,7 @@ def test_dynamic_system_0_foci():
 
     logger.plot_foci_num()
     logger.plot_y()
-    #logger.plot_node_num()
+    logger.plot_node_num()
     logger.plot_foci_x()
     plt.show()
 
@@ -619,11 +619,33 @@ def test_dynamic_system_0_foci2():
         estimated_y = grnn.get_regression(foci_ips)
         logger.collect_data()
 
-    logger.plot_foci_num()
-    logger.plot_y()
-    #logger.plot_node_num()
-    logger.plot_foci_x()
-    plt.show()
+    logger.plot_to_file('results')
+
+def test_cluster_adding_grnn():
+    grnn.add_node([1], 10)
+    grnn.add_node([2], 20)
+    grnn.add_node([3], 30)
+
+    grnn.add_node([1.1], 5)
+    grnn.add_node([1.5], 40)
+
+    grnn.add_node([0.8], 2)
+    grnn.add_node([3.25], 3)
+
+    print(grnn.cluster_centres)
+    print()
+    print(grnn.cumul_cluster_outputs)
+    print()
+    print(grnn.cluster_occurences)
+    print()
+
+def test_cluster_calculation_grnn():
+    grnn.add_node([1], 10)
+    grnn.add_node([2], 20)
+    
+    print(grnn.get_regression(1.5))
+    grnn.add_node([0.8], -100)
+    print(grnn.get_regression(1.5))
 
 def main():
     random.seed(0)
@@ -639,13 +661,16 @@ def main():
     #test_5_foci()
     #test_dynamic_grnn()
     #test_dynamic_system1()
-    test_dynamic_system_0_foci()
+    #test_dynamic_system_0_foci()
     #test_freeze()
     #test_plot()
     #test_peaks()
     #test_reset()
     #plot_errors_peaks()
     #analyze_grnn()
+    #test_cluster_adding_grnn()
+    #test_cluster_calculation_grnn()
+    test_dynamic_system_0_foci2()
 
 if __name__ == "__main__":
     main()
