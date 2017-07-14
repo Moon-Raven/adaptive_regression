@@ -8,6 +8,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import BoundaryNorm
 from matplotlib.ticker import MaxNLocator
+from matplotlib.backends.backend_pdf import PdfPages
+
+def reset_all():
+    pbrc.reset()
+    grnn.reset()
+    plant.reset()
 
 def test_plant():
     for i in range(100):
@@ -310,7 +316,9 @@ def test_dynamic_system_0_foci():
     pbrc.set_distance_threshold(0.5)
     pbrc.set_log_level(0)
     grnn.set_sigma(0.5)
-
+    plant.set_plant_type_x('5_foci_array')
+    plant.set_plant_type_y('linear')
+    
     for i in range(N):
         data = plant.get_next_data()
         x = data['x']    
@@ -485,15 +493,18 @@ def test_peaks():
 
     plot_estimation(-3, 3, -3, 3)
 
-def plot_errors_peaks():
+def get_one_error_peaks(noise_level):
+    reset_all()
     N = 10404
+    #N = 51*51
     plant.set_y_period(5)
     plant.set_plant_type_x('zigzag')
     plant.set_plant_type_y('peaks')
     pbrc.set_distance_threshold(0.5)
     pbrc.set_log_level(0)
     grnn.set_sigma(0.3)
-    plant.set_noise_amplitude(10)
+    plant.set_noise_amplitude(noise_level)
+    x1min, x1max, x2min, x2max = -3, 3, -3, 3
 
     for i in range(N):
         data = plant.get_next_data()
@@ -506,7 +517,113 @@ def plot_errors_peaks():
         if y != None:
             grnn.add_node(foci_ips, y)
 
-    #plot_estimation(-3, 3, -3, 3)
+    real_y, estimated_y = get_real_and_estimated_function(x1min, x1max, x2min, x2max)
+
+    errors = np.abs(real_y-estimated_y)
+
+    return errors
+
+def plot_errors_peaks():
+    means = []
+    noise_amplitudes = list(range(11))
+    pp = PdfPages('results.pdf')
+
+    for noise_amplitude in noise_amplitudes:
+        errors = get_one_error_peaks(noise_amplitude)
+        plt.figure()
+        plt.hist(errors.flatten(),alpha=0.75)
+        plt.title("Noise amplitude: {0}".format(noise_amplitude))
+        plt.xlabel("Absolute error")
+        plt.ylabel("Number of occurences")
+        plt.grid()
+        pp.savefig()
+
+        means.append(np.mean(errors))
+        
+    # Plot means of errors
+    plt.figure()
+    plt.plot(noise_amplitudes, means, noise_amplitudes, means, 'go')
+    plt.title("Mean absolute errors for different noise amplitudes")
+    plt.xlabel("Noise amplitude")
+    plt.ylabel("Mean absolute error")
+    plt.grid()
+    pp.savefig()
+    pp.close()
+
+def test_reset():
+    print("GRNN node num: {0}".format(grnn.get_node_num()))
+    print("Plant counter: {0}".format(plant.counter))
+    print("PBRC foci num: {0}".format(len(pbrc.get_foci())))
+    print("*"*50)
+
+    for i in range(50):
+        data = plant.get_next_data()
+        x = data['x']    
+        y = data['y']
+
+        pbrc.iterate(x)
+        foci_ips = pbrc.get_foci_ips()
+
+        if y != None:
+            grnn.add_node(foci_ips, y)
+        print("GRNN node num: {0}".format(grnn.get_node_num()))
+        print("Plant counter: {0}".format(plant.counter))
+        print("PBRC foci num: {0}".format(len(pbrc.get_foci())))
+        print("*"*50)
+
+    reset_all()
+
+    print("GRNN node num: {0}".format(grnn.get_node_num()))
+    print("Plant counter: {0}".format(plant.counter))
+    print("PBRC foci num: {0}".format(len(pbrc.get_foci())))
+    print("*"*50)
+
+    for i in range(50):
+        data = plant.get_next_data()
+        x = data['x']    
+        y = data['y']
+
+        pbrc.iterate(x)
+        foci_ips = pbrc.get_foci_ips()
+
+        if y != None:
+            grnn.add_node(foci_ips, y)
+        print("GRNN node num: {0}".format(grnn.get_node_num()))
+        print("Plant counter: {0}".format(plant.counter))
+        print("PBRC foci num: {0}".format(len(pbrc.get_foci())))
+        print("*"*50)
+
+def analyze_grnn():
+    grnn.add_node(np.array([111,222,333,444,555]), 666)
+    grnn.add_node(np.array([3, 4, 5, 6, 7, 8]), 777)
+    print(grnn.get_nodes_x())
+
+def test_dynamic_system_0_foci2():
+    N = 4000
+    pbrc.set_distance_threshold(0.5)
+    pbrc.set_log_level(0)
+    grnn.set_sigma(0.5)
+    plant.set_plant_type_x('5_foci_array')
+
+    for i in range(N):
+        data = plant.get_next_data()
+        x = data['x']    
+        y = data['y']
+
+        pbrc.iterate(x)
+        foci_ips = pbrc.get_foci_ips()
+
+        if y != None:
+            grnn.add_node(foci_ips, y)
+
+        estimated_y = grnn.get_regression(foci_ips)
+        logger.collect_data()
+
+    logger.plot_foci_num()
+    logger.plot_y()
+    #logger.plot_node_num()
+    logger.plot_foci_x()
+    plt.show()
 
 def main():
     random.seed(0)
@@ -522,11 +639,13 @@ def main():
     #test_5_foci()
     #test_dynamic_grnn()
     #test_dynamic_system1()
-    #test_dynamic_system_0_foci()
+    test_dynamic_system_0_foci()
     #test_freeze()
     #test_plot()
-    test_peaks()
+    #test_peaks()
+    #test_reset()
     #plot_errors_peaks()
+    #analyze_grnn()
 
 if __name__ == "__main__":
     main()

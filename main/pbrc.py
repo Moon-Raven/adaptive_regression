@@ -21,6 +21,23 @@ def set_log_level(new_log_level):
     global LOG_LEVEL
     LOG_LEVEL = new_log_level
 
+def reset():
+    global dim, foci, old_foci_distances, original_foci_positions, num_of_foci
+    global Z, F, S, z_old1, z_old2, foci_frozen
+
+    dim = 2
+    foci = []
+    old_foci_distances = []
+    original_foci_positions = []
+    num_of_foci = 0
+
+    Z = 0
+    F = np.zeros(dim)
+    S = 0
+    z_old1 = np.zeros(dim)
+    z_old2 = np.zeros(dim)
+    foci_frozen = False
+
 # *** End of configuration functions ***
 
 

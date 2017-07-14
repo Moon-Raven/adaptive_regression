@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import math
-from mpl_toolkits.mplot3d import Axes3D
 
 from timeit import default_timer as timer
 
@@ -13,9 +12,10 @@ def set_sigma(new_sigma):
     global SIGMA
     SIGMA = new_sigma
 
-#def set_dimensions(new_dimensions):
-    #global DIMENSIONS
-    #DIMENSIONS = new_dimensions
+def reset():
+    global nodes, max_dim, last_regression
+    nodes = {"x":[], "y": np.empty(0)}
+    last_regression = None   
 
 # *** End of configuration functions ***
 
@@ -24,70 +24,69 @@ def set_sigma(new_sigma):
 # ********************* Control *********************
 
 # Global/static variables
-nodes = {"x":[], "y": np.empty(0)}
-max_dim = 0
+nodes_x = np.empty((0, 0))
+nodes_y = np.empty(0)
+
 last_regression = None
+
+# Adds more dimensions
+def add_dimensions(new_dimensions):
+    global nodes_x
+
+    old_dimensions = nodes_x.shape[1]
+
+    # Check if the dimensions should be increased (not decreased)
+    if new_dimensions <= old_dimensions:
+        print("Error in add_dimensions: new dimensions <= old dimensions. Exiting...")
+        exit()
+
+    # Expand existing nodes with additional dimensions, fill missing data with zeros
+    dimensions_to_add = new_dimensions - old_dimensions    
+    nodes_x = np.concatenate((nodes_x, np.zeros([nodes_x.shape[0], dimensions_to_add])), axis=1)
 
 # Appends new node to the existing array of nodes
 def add_node(new_x, new_y):
-    global nodes, max_dim
-    nodes["x"].append(new_x)
-    nodes["y"] = np.append(nodes["y"], new_y)
-    if len(new_x) > max_dim:
-        max_dim = len(new_x)
+    global nodes_x, nodes_y
 
+    # Check if input vector has increased in number of dimensions
+    dims = nodes_x.shape
+    if len(new_x) > dims[1]:
+        add_dimensions(len(new_x))
 
+    # Add new data
+    nodes_x = np.concatenate((nodes_x, [new_x]), 0)
+    nodes_y = np.concatenate((nodes_y, [new_y]))
 
 # Returns the regression for a sample x
-#@profile
 def get_regression(x):
-    t1 = timer()
-    global nodes
     global last_regression
 
+    # Fix some weird errors
     if not hasattr(x, '__len__'):
         x = np.array([x])
 
-    node_num = len(nodes["x"])
+    node_num = len(nodes_x)
 
     # If network doesn't have any nodes yet
     if node_num == 0:
         return 0
 
-    if len(x) < max_dim:
-        print("GRNN: len(x) < max_dim; Exiting...")
-        exit()
+    # Check if input vector has increased in number of dimensions
+    if len(x) > nodes_x.shape[1]:
+        add_dimensions(len(x))
 
-    
-    arr_yi = nodes["y"]
+    # Calculate estimated output for given input x
+    distances = x - nodes_x
 
-    distances = np.zeros([node_num, max_dim])
-
-    t2 = timer()
-    for i in range(node_num):
-        x_i = nodes['x'][i]
-        
-        #for j in range(len(x_i)):
-        #    distances[i][j] = x[j] - x_i[j]
-
-        ll = len(x_i)
-        distances[i][0:ll] = x[0:ll] - x_i[0:ll]
-    t3 = timer()
-
-    #print(distances)
     arr_Di = np.sum(distances * distances, 1)
     arr_ex = np.exp(-arr_Di/(2*SIGMA**2))
-
-    t4 = timer()
-
-    upper_sum = np.sum(arr_ex * arr_yi)
+    
+    upper_sum = np.sum(arr_ex * nodes_y)
     lower_sum = np.sum(arr_ex)
 
-    t5 = timer()
     y = upper_sum / lower_sum
     last_regression = y
-    t6 = timer()
-    #print("1-2:{0}; 2-3:{1}; 3-4:{2}; 4-5:{3}; 5-6:{4}".format(t2-t1,t3-t2,t4-t3,t5-t4,t6-t5))    
+
     return y
 
 # *** End of control ***
@@ -96,12 +95,18 @@ def get_regression(x):
 # ********************* Information fetching functions *********************
 
 def get_nodes():
-    return nodes
+    return {"x":nodes_x,"y":nodes_y}
+
+def get_nodes_x():
+    return nodes_x
+
+def get_nodes_y():
+    return get_nodes_y
 
 def get_last_regression():
     return last_regression
 
 def get_node_num():
-    return nodes['y'].shape[0]
+    return nodes_y.shape[0]
 
 # *** End of information fetching functions ***

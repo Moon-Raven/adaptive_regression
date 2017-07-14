@@ -1,13 +1,9 @@
 import numpy as np
 import random
 
-f1 = np.array([2,3])
-f2 = np.array([4,5])
-
 Y_PERIOD = 10
 counter = 0
 noise_amplitude = 0.05
-focus_switch_time = 500
 
 last_data = None
 
@@ -18,6 +14,11 @@ plant_type_x = '5_foci_array'
 # How is y determined based on given x
 # Options: 'peaks', 'linear'
 plant_type_y = 'linear'
+
+def reset():
+    global counter, last_data
+    counter = 0
+    last_data = None
 
 def set_plant_type_x(new_type):
     global plant_type_x
@@ -39,6 +40,9 @@ def set_noise_amplitude(new_amplitude):
 def get_x(counter):
 
     if plant_type_x == 'switch':
+        f1 = np.array([2,3])
+        f2 = np.array([4,5])
+        focus_switch_time = 500
         if(counter < focus_switch_time):
             x = f1
         else:
@@ -79,11 +83,10 @@ def get_x(counter):
             x1 = tmp
         else:
             x1 = 2*xnum-tmp-1
-        #print(np.array([x1,x2]))
-        #print(xmin + dx*np.array([x1,x2]))
+            
         return xmin + dx*np.array([x1,x2])
 
-    return x + noise
+    return x
 
 # Calculates plant output for the given plant input
 def get_y(x, add_noise = True):
