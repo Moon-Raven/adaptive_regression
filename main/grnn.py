@@ -6,7 +6,8 @@ import math
 SIGMA = 0.8
 CLUSTER_RADIUS = 0.3
 
-# ********************* Configuration functions *********************
+# ***** Configuration functions *****
+
 def set_sigma(new_sigma):
     global SIGMA
     SIGMA = new_sigma
@@ -25,11 +26,10 @@ def reset():
 
     last_regression = None   
 
-# *** End of configuration functions ***
 
 
 
-# ********************* Control *********************
+# ***** Control functions*****
 
 # Global/static variables
 cluster_centres = np.empty((0, 0))
@@ -81,6 +81,7 @@ def add_new_cluster(new_center, new_output):
     cumul_cluster_outputs = np.concatenate((cumul_cluster_outputs, [new_output]))
     cluster_occurences = np.concatenate((cluster_occurences, [1]))
 
+# Updates cluster with given index
 def update_cluster(cluster_index, new_y):
     global cluster_centres, cumul_cluster_outputs, cluster_occurences
 
@@ -146,10 +147,10 @@ def get_regression(x):
 
     return y
 
-# *** End of control ***
 
 
-# ********************* Information fetching functions *********************
+
+# ***** Information fetching functions *****
 
 def get_last_regression():
     return last_regression
@@ -162,5 +163,3 @@ def get_total_node_num():
     
 def get_cluster_centers():
     return cluster_centres
-
-# *** End of information fetching functions ***

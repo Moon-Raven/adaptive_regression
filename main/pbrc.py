@@ -7,7 +7,7 @@ LAMBDA = 0.6
 DISTANCE_THRESHOLD = 0.3
 LOG_LEVEL = 0
 
-# ********************* Configuration functions *********************
+# ***** Configuration functions *****
 
 def set_lambda(new_lambda):
     global LAMBDA
@@ -38,11 +38,9 @@ def reset():
     z_old2 = np.zeros(dim)
     foci_frozen = False
 
-# *** End of configuration functions ***
 
 
-
-# ********************* Control *********************
+# ***** Control functions *****
 
 # Static/global control variables
 dim = 2
@@ -124,8 +122,6 @@ def iterate(x):
             log("Current IP: {0}, IP of highest focus {1} is {2}".format(current_ip, max(foci_ips), np.argmax(foci_ips)), 2)
 
         # Find index of closest focus
-        # Convert list of arrays to numpy matrix, should change
-        # foci to be matrix in the first place :(
         np_foci = np.array(foci)
         zmf = z-foci
         z2 = np.power(zmf, 2)
@@ -160,12 +156,9 @@ def iterate(x):
                 foci[min_foci_ind] = z
                 old_foci_distances[min_foci_ind] = 0
 
-# *** End of control ***
 
 
-
-
-# ********************* Information fetching functions *********************
+# ***** Information fetching functions *****
 
 # Returns all foci
 def get_foci():
@@ -176,12 +169,9 @@ def get_foci_ips():
     foci_ips = np.apply_along_axis(distance2ip, 0, np_distances)
     return foci_ips
 
-# *** End of information fetching functions ***
 
 
-
-
-# ******************* Utility functions *********************
+# ***** Utility functions *****
 
 # Performs the given log if it's level is high enough
 def log(s, level):
@@ -230,7 +220,6 @@ def distance(z1, z2):
 
 def distance2ip(focus_distance):
     return (1/(1+focus_distance))
-# *** End of utility functions ***
 
 
 

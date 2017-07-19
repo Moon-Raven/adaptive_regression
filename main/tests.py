@@ -6,9 +6,12 @@ import random
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 from matplotlib.colors import BoundaryNorm
 from matplotlib.ticker import MaxNLocator
 from matplotlib.backends.backend_pdf import PdfPages
+
+folder = '../results/MiniMaster/'
 
 def reset_all():
     pbrc.reset()
@@ -647,6 +650,168 @@ def test_cluster_calculation_grnn():
     grnn.add_node([0.8], -100)
     print(grnn.get_regression(1.5))
 
+def plot_linear_input():
+    plant.set_plant_type_x('5_foci_array')
+    N = 1300
+    x = np.empty([N])
+
+    for i in range(N):
+        x[i] = plant.get_x(i)[0]
+
+    mpl.rcParams['xtick.labelsize'] = 20
+    mpl.rcParams['ytick.labelsize'] = 20
+    plt.plot(x)
+    plt.grid()
+    plt.ylim([-0.5,4.5])
+    plt.title('Input function for x1 and x2', fontsize=20)
+    plt.xlabel('Time', fontsize=20)
+    plt.ylabel('Input value of x1 and x2', fontsize=20)
+    plt.tight_layout()
+    plt.savefig(folder+'input.png')
+
+def set_plot_params():
+    mpl.rcParams['xtick.labelsize'] = 20
+    mpl.rcParams['ytick.labelsize'] = 20
+    plt.grid()
+    plt.tight_layout()
+
+def plot_mini_master():
+    N = 4000
+    pbrc.set_distance_threshold(0.5)
+    pbrc.set_log_level(0)
+    grnn.set_sigma(0.5)
+    plant.set_plant_type_x('5_foci_array')
+    plant.set_plant_type_y('linear')
+
+    for i in range(N):
+        data = plant.get_next_data()
+        x = data['x']    
+        y = data['y']
+
+        pbrc.iterate(x)
+        foci_ips = pbrc.get_foci_ips()
+
+        if y != None:
+            grnn.add_node(foci_ips, y)
+
+        estimated_y = grnn.get_regression(foci_ips)
+        logger.collect_data()
+
+    if False:
+        plt.figure()
+        mpl.rcParams['xtick.labelsize'] = 20
+        mpl.rcParams['ytick.labelsize'] = 20
+        plt.plot(logger.foci_num)
+        plt.title("PBRC: Number of foci", fontsize=20)
+        plt.xlabel('Time', fontsize=20)
+        plt.ylabel('Number of foci', fontsize=20)    
+        plt.grid()    
+        plt.ylim([0, 10])
+        plt.tight_layout()
+
+        #plt.show()
+        plt.savefig(folder+'foci_num.png')
+
+    if False:
+        plt.figure()
+        foci_pos = np.array(pbrc.original_foci_positions).transpose()        
+        foci_x1 = foci_pos[0,:]    
+        foci_x2 = foci_pos[1,:]    
+
+        plt.scatter(foci_x1, foci_x2, c='g', s=200)
+        plt.title("PBRC: Foci positions", fontsize=20)
+        plt.xlabel('x1', fontsize=20)
+        plt.ylabel('x2', fontsize=20)    
+        plt.grid()    
+        plt.tight_layout()
+
+        #plt.show()
+        plt.savefig(folder+'foci_positions.png')
+
+    if False:
+        plt.figure()
+        mpl.rcParams['xtick.labelsize'] = 20
+        mpl.rcParams['ytick.labelsize'] = 20
+        i = logger.i
+        foci_appearance_moments = logger.foci_appearance_moments
+        foci_positions = logger.foci_positions
+        dim = logger.dim
+        plt_base_number = dim * 100 + 10
+
+        for j in range(logger.last_foci_num):
+            x_axis = np.arange(foci_appearance_moments[j], i-1)
+            y_axis = np.empty([i-1-foci_appearance_moments[j],dim])
+
+            for k in range(foci_appearance_moments[j], i-1):
+                y_axis[k - foci_appearance_moments[j]] = foci_positions[k][j]
+
+            for k in range(1):        
+                plt.plot(x_axis,y_axis[:,0], label="focus #{0}_x{1}".format(j, k))
+
+        k = 0
+        plt.ylim([-0.1, 4.1])
+        plt.title("PBRC: Foci positions".format(k), fontsize=20)
+
+        if False:            
+            plt.legend()
+
+        plt.xlabel('Time', fontsize=20)
+        plt.ylabel('Focus x1 value', fontsize=20)
+        plt.grid()
+        plt.tight_layout()
+
+        #plt.show()
+        plt.savefig(folder+'foci_positions_variable.png')
+
+    if False:
+        plt.figure()
+
+        mpl.rcParams['xtick.labelsize'] = 20
+        mpl.rcParams['ytick.labelsize'] = 20
+
+        # Draw total node number
+        plt.subplot(211)
+        plt.plot(logger.total_node_num)
+        plt.yticks(np.arange(0, max(logger.total_node_num)+1, 100))
+        plt.title("GRNN: Total number of nodes", fontsize=20)
+        plt.xlabel('Time', fontsize=20)
+        plt.ylabel('Num. of nodes', fontsize=20)
+        plt.grid()
+        plt.tight_layout()
+
+        # Draw number of clusters
+        plt.subplot(212)
+        plt.plot(logger.cluster_num)
+        plt.title("GRNN: Number of clusters", fontsize=20)
+        plt.xlabel('Time', fontsize=20)
+        plt.ylabel('Num. of clusters', fontsize=20)
+        plt.ylim([0, max(logger.cluster_num)+1])
+        plt.grid()
+        plt.tight_layout()
+        
+        #plt.show()
+        plt.savefig(folder+'grnn_node_cluster_num.png')
+
+    if False:
+        fig = plt.figure()
+
+        mpl.rcParams['xtick.labelsize'] = 20
+        mpl.rcParams['ytick.labelsize'] = 20
+
+        fig.set_canvas(plt.gcf().canvas)
+        plt.title("Estimation of output", fontsize=20)
+        plt.ylim([-2,48])
+        plt.plot(logger.estimated_y, label='Estimated output')
+        plt.plot(logger.real_y_t, logger.real_y, 'o', label='Real output')
+        plt.legend()
+        plt.xlabel('Time', fontsize=20)
+        plt.ylabel('Output value', fontsize=20)
+        plt.grid()
+        plt.tight_layout()
+
+        #plt.show()
+        plt.savefig(folder+'output_comparison.png')
+
 def main():
     random.seed(0)
     #test_plant()
@@ -670,7 +835,9 @@ def main():
     #analyze_grnn()
     #test_cluster_adding_grnn()
     #test_cluster_calculation_grnn()
-    test_dynamic_system_0_foci2()
+    #test_dynamic_system_0_foci()
+    #plot_linear_input()
+    plot_mini_master()
 
 if __name__ == "__main__":
     main()
