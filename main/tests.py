@@ -11,7 +11,13 @@ from matplotlib.colors import BoundaryNorm
 from matplotlib.ticker import MaxNLocator
 from matplotlib.backends.backend_pdf import PdfPages
 
-folder = '../results/MiniMaster/'
+extension = '.pdf'
+folder = '../results/Master/'
+
+def set_save_options(image_extension, destination_folder):
+    global extension, folder
+    extension = image_extension
+    folder = destination_folder
 
 def reset_all():
     pbrc.reset()
@@ -658,24 +664,140 @@ def plot_linear_input():
     for i in range(N):
         x[i] = plant.get_x(i)[0]
 
-    mpl.rcParams['xtick.labelsize'] = 20
-    mpl.rcParams['ytick.labelsize'] = 20
     plt.plot(x)
     plt.grid()
     plt.ylim([-0.5,4.5])
-    plt.title('Ulazna funkcija procesa', fontsize=20)
-    plt.xlabel('Vreme', fontsize=20)
-    plt.ylabel('Vrednost ulaza za x1 i x2', fontsize=20)
+    plt.title('Ulazna funkcija procesa')
+    plt.xlabel('Vreme')
+    plt.ylabel('Vrednost ulaza za x1 i x2')
     plt.tight_layout()
     plt.savefig(folder+'input.png')
 
 def set_plot_params():
-    mpl.rcParams['xtick.labelsize'] = 20
-    mpl.rcParams['ytick.labelsize'] = 20
     plt.grid()
     plt.tight_layout()
 
-def plot_mini_master(extension):
+def plot_foci_num(save = True):
+    plt.figure()
+
+    plt.plot(logger.foci_num)
+    plt.title("PBRC: Broj fokusa u sistemu")
+    plt.xlabel('Vreme')
+    plt.ylabel('Broj fokusa')    
+    plt.grid()    
+    plt.ylim([0, 10])
+    plt.tight_layout()
+
+    if save == True:
+        plt.savefig(folder+'broj_fokusa.' + extension)
+    else:
+        plt.show()
+
+def plot_foci_starting_positions(save = True):
+    plt.figure()
+
+    foci_pos = np.array(pbrc.original_foci_positions).transpose()        
+    foci_x1 = foci_pos[0,:]    
+    foci_x2 = foci_pos[1,:]    
+
+    plt.scatter(foci_x1, foci_x2, c='g', s=150)
+    plt.title("PBRC: Početni položaji fokusa")
+    plt.xlabel('x1')
+    plt.ylabel('x2')    
+    plt.grid()    
+    plt.tight_layout()
+
+
+    if save == True:
+        plt.savefig(folder+'polozaj_fokusa.' + extension)
+    else:
+        plt.show()
+
+def plot_foci_movement(save = True):
+    plt.figure()
+
+    i = logger.i
+    foci_appearance_moments = logger.foci_appearance_moments
+    foci_positions = logger.foci_positions
+    dim = logger.dim
+    plt_base_number = dim * 100 + 10
+
+    for j in range(logger.last_foci_num):
+        x_axis = np.arange(foci_appearance_moments[j], i-1)
+        y_axis = np.empty([i-1-foci_appearance_moments[j],dim])
+
+        for k in range(foci_appearance_moments[j], i-1):
+            y_axis[k - foci_appearance_moments[j]] = foci_positions[k][j]
+
+        for k in range(1):        
+            plt.plot(x_axis,y_axis[:,0], label="Fokus #{0}_x{1}".format(j, k))
+
+    k = 0
+    plt.ylim([-0.1, 4.1])
+    plt.title("PBRC: Promene položaja fokusa tokom vremena".format(k))
+
+    if False:            
+        plt.legend()
+
+    plt.xlabel('Vreme')
+    plt.ylabel('Vrednost x1 koordinate fokusa')
+    plt.grid()
+    plt.tight_layout()
+
+    
+    if save == True:
+        plt.savefig(folder+'promene_polozaja_fokusa.' + extension)
+    else:
+        plt.show()
+
+def plot_node_cluster_num(save = True):
+    plt.figure()
+
+    # Draw total node number
+    plt.subplot(211)
+    plt.plot(logger.total_node_num)
+    plt.yticks(np.arange(0, max(logger.total_node_num)+1, 100))
+    plt.title("GRNN: Ukupan broj pristiglih nodova")
+    plt.xlabel('Vreme')
+    plt.ylabel('Broj nodova')
+    plt.grid()
+    plt.tight_layout()
+
+    # Draw number of clusters
+    plt.subplot(212)
+    plt.plot(logger.cluster_num)
+    plt.title("GRNN: Broj grupa")
+    plt.xlabel('Vreme')
+    plt.ylabel('Broj grupa')
+    plt.ylim([0, max(logger.cluster_num)+1])
+    plt.grid()
+    plt.tight_layout()
+    
+    if save == True:
+        plt.savefig(folder+'broj_grupa_i_nodova.' + extension)
+    else:
+        plt.show()
+
+def plot_output_comparison(save = True):
+    fig = plt.figure()
+
+    fig.set_canvas(plt.gcf().canvas)
+    plt.title(u"Poređenje estimiranog i pravog izlaza")
+    plt.ylim([-2,48])
+    plt.plot(logger.estimated_y, label='Estimiran izlaz')
+    plt.plot(logger.real_y_t, logger.real_y, 'o', label='Pravi izlaz')
+    plt.legend()
+    plt.xlabel('Vreme')
+    plt.ylabel('Vrednost izlaza')
+    plt.grid()
+    plt.tight_layout()
+
+    if save == True:
+        plt.savefig(folder+'poredjenje_izlaza.' + extension)
+    else:
+        plt.show()
+
+def plot_mini_master():
     N = 4000
     pbrc.set_distance_threshold(0.5)
     pbrc.set_log_level(0)
@@ -697,123 +819,132 @@ def plot_mini_master(extension):
         estimated_y = grnn.get_regression(foci_ips)
         logger.collect_data()
 
-    if True:
-        plt.figure()
-        mpl.rcParams['xtick.labelsize'] = 20
-        mpl.rcParams['ytick.labelsize'] = 20
-        plt.plot(logger.foci_num)
-        plt.title("PBRC: Broj fokusa u sistemu", fontsize=20)
-        plt.xlabel('Vreme', fontsize=20)
-        plt.ylabel('Broj fokusa', fontsize=20)    
-        plt.grid()    
-        plt.ylim([0, 10])
-        plt.tight_layout()
+    # Configure default tick label sizes
+    #mpl.rcParams['xtick.labelsize'] = 20
+    #mpl.rcParams['ytick.labelsize'] = 20
+    #mpl.rc('font', family='Arial')
+    # style file is located in C:\Users\My_User_Name\.matplotlib\stylelib
+    plt.style.use('master')
 
-        #plt.show()
-        plt.savefig(folder+'broj_fokusa.' + extension)
 
-    if True:
-        plt.figure()
-        foci_pos = np.array(pbrc.original_foci_positions).transpose()        
-        foci_x1 = foci_pos[0,:]    
-        foci_x2 = foci_pos[1,:]    
+    plot_foci_num()
+    plot_foci_starting_positions()
+    plot_foci_movement()
+    plot_node_cluster_num()
+    plot_output_comparison()
 
-        plt.scatter(foci_x1, foci_x2, c='g', s=200)
-        plt.title("PBRC: Početni položaji fokusa", fontsize=20)
-        plt.xlabel('x1', fontsize=20)
-        plt.ylabel('x2', fontsize=20)    
-        plt.grid()    
-        plt.tight_layout()
+def plot_grnn_example():
+    plt.style.use('master')
+    grnn.set_sigma(0.5)
+    xses = np.array([1, 2, 3, 4, 5])
+    yses = np.array([2, 2, 0, 4, 3])
 
-        #plt.show()
-        plt.savefig(folder+'polozaj_fokusa.png')
+    for i in range(xses.shape[0]):
+        grnn.add_node(np.array([xses[i]]), yses[i])
 
-    if True:
-        plt.figure()
-        mpl.rcParams['xtick.labelsize'] = 20
-        mpl.rcParams['ytick.labelsize'] = 20
-        i = logger.i
-        foci_appearance_moments = logger.foci_appearance_moments
-        foci_positions = logger.foci_positions
-        dim = logger.dim
-        plt_base_number = dim * 100 + 10
+    x = np.linspace(0,6, 1000)
+    y = np.empty(x.shape[0])
 
-        for j in range(logger.last_foci_num):
-            x_axis = np.arange(foci_appearance_moments[j], i-1)
-            y_axis = np.empty([i-1-foci_appearance_moments[j],dim])
+    for i in range(x.shape[0]):
+        new_y = grnn.get_regression(x[i])
+        y[i] = new_y
 
-            for k in range(foci_appearance_moments[j], i-1):
-                y_axis[k - foci_appearance_moments[j]] = foci_positions[k][j]
+    plt.title('Primer GRNN-a')
+    plt.xlabel('Ulaz')
+    plt.ylabel('Izlaz')
+    plt.scatter(xses, yses, c='r', s=150, label='Podaci za obuku')
+    plt.plot(x, y, label='Regresorska površ')
+    ax = plt.subplot(111)
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, 0.12), ncol=2)
+    plt.grid()
+    plt.xlim(0, 6)
+    plt.tight_layout()
+    #plt.show()
 
-            for k in range(1):        
-                plt.plot(x_axis,y_axis[:,0], label="Fokus #{0}_x{1}".format(j, k))
+    plt.savefig(folder+'grnn_primer1.' + extension)
 
-        k = 0
-        plt.ylim([-0.1, 4.1])
-        plt.title("PBRC: Promene položaja fokusa tokom vremena".format(k), fontsize=20)
+def plot_grnn_example_multi_sigma():
+    plt.style.use('master')
+    sigmas = [0.03, 0.5, 2, 10]
 
-        if False:            
-            plt.legend()
+    for sigma in sigmas:
+        grnn.reset()
+        grnn.set_sigma(sigma)
+        xses = np.array([1, 2, 3, 4, 5])
+        yses = np.array([2, 2, 0, 4, 3])
 
-        plt.xlabel('Vreme', fontsize=20)
-        plt.ylabel('Vrednost x1 koordinate fokusa', fontsize=20)
-        plt.grid()
-        plt.tight_layout()
+        for i in range(xses.shape[0]):
+            grnn.add_node(np.array([xses[i]]), yses[i])
 
-        #plt.show()
-        plt.savefig(folder+'promene_polozaja_fokusa.png')
+        x = np.linspace(0,6, 1000)
+        y = np.empty(x.shape[0])
 
-    if True:
-        plt.figure()
+        for i in range(x.shape[0]):
+            new_y = grnn.get_regression(x[i])
+            y[i] = new_y
+        plt.plot(x, y, label='σ = {0}'.format(sigma), lw=1.5)
 
-        mpl.rcParams['xtick.labelsize'] = 20
-        mpl.rcParams['ytick.labelsize'] = 20
+    plt.title('Primer GRNN-a za različite vrednosti σ')
+    plt.xlabel('Ulaz')
+    plt.ylabel('Izlaz')
+    plt.scatter(xses, yses, c='r', s=150, label='Podaci za obuku')    
+    ax = plt.subplot(111)
+    ax.legend(loc='upper right', bbox_to_anchor=(1, 0.4), ncol=1)
+    plt.grid()
+    plt.xlim(0, 6)
+    plt.tight_layout()
+    #plt.show()
 
-        # Draw total node number
-        plt.subplot(211)
-        plt.plot(logger.total_node_num)
-        plt.yticks(np.arange(0, max(logger.total_node_num)+1, 100))
-        plt.title("GRNN: Ukupan broj pristiglih nodova", fontsize=20)
-        plt.xlabel('Vreme', fontsize=20)
-        plt.ylabel('Broj nodova', fontsize=20)
-        plt.grid()
-        plt.tight_layout()
+    plt.savefig(folder+'grnn_razne_sigme.' + extension)
 
-        # Draw number of clusters
-        plt.subplot(212)
-        plt.plot(logger.cluster_num)
-        plt.title("GRNN: Broj grupa", fontsize=20)
-        plt.xlabel('Vreme', fontsize=20)
-        plt.ylabel('Broj grupa', fontsize=20)
-        plt.ylim([0, max(logger.cluster_num)+1])
-        plt.grid()
-        plt.tight_layout()
-        
-        #plt.show()
-        plt.savefig(folder+'broj_grupa_i_nodova.png')
+def plot_grouping():
+    plt.style.use('master')
+    plt.title('Primer grupisanja odbiraka GRNN-a')
+    c = [np.array([2,5]), np.array([4, 1.5]), np.array([6, 5])]
+    centers = np.array(c)
+    plt.ylim(0,7)
+    plt.xlim(0,8)
 
-    if True:
-        fig = plt.figure()
+    # Plot centers
+    plt.scatter(centers[:,0], centers[:,1], c=(1,0.2,0.2,0.5), s=22000, marker='o')
 
-        mpl.rcParams['xtick.labelsize'] = 20
-        mpl.rcParams['ytick.labelsize'] = 20
+    # Plot areas
+    plt.scatter(centers[:,0], centers[:,1], c='r', s=200, marker='x')
 
-        fig.set_canvas(plt.gcf().canvas)
-        plt.title("Poređenje estimiranog i pravog izlaza", fontsize=20)
-        plt.ylim([-2,48])
-        plt.plot(logger.estimated_y, label='Estimiran izlaz')
-        plt.plot(logger.real_y_t, logger.real_y, 'o', label='Pravi izlaz')
-        plt.legend()
-        plt.xlabel('Vreme', fontsize=20)
-        plt.ylabel('Vrednost izlaza', fontsize=20)
-        plt.grid()
-        plt.tight_layout()
+    nodes = np.array([[1.5, 5.5],
+                      [2.5, 5.2],
+                      [3.5, 2.0],
+                      [5.5, 4.9],
+                      [6.0, 6.0],
+                      [6.5, 4.3]])
 
-        #plt.show()
-        plt.savefig(folder+'poredjenje_izlaza.png')
+    # Plot nodes
+    plt.scatter(nodes[:,0], nodes[:,1], c='c', s=500, marker='o')
+
+    #Anotacija centara klastera
+    ax = plt.subplot(111)
+    for i, txt in enumerate(list(centers)):
+        ax.annotate('g' + str(i+1), (centers[i,0]-0.07, centers[i, 1]-0.35))
+
+    # Anotacija odbiraka
+    y_vrednosti = [4,2,5,1,3,4]
+    for i, txt in enumerate(list(nodes)):
+        ax.annotate(y_vrednosti[i], (nodes[i,0]-0.065, nodes[i, 1]-0.09))
+
+    #plt.scatter(xses, yses, c='r', s=150, label='Podaci za obuku')    
+    #ax = plt.subplot(111)
+    #ax.legend(loc='upper right', bbox_to_anchor=(1, 0.4), ncol=1)
+    plt.grid()
+    #plt.xlim(0, 6)
+    plt.tight_layout()
+    #plt.show()
+
+    plt.savefig(folder+'grnn_grupisanje.' + extension)
 
 def main():
     random.seed(0)
+    set_save_options('pdf', '../results/Master/')
+
     #test_plant()
     #test_pbrc()
     #test_plant_and_pbrc()
@@ -837,7 +968,10 @@ def main():
     #test_cluster_calculation_grnn()
     #test_dynamic_system_0_foci()
     #plot_linear_input()
-    plot_mini_master()
+    #plot_mini_master()
+    #plot_grnn_example()
+    #plot_grnn_example_multi_sigma()
+    plot_grouping()
 
 if __name__ == "__main__":
     main()
