@@ -1352,7 +1352,7 @@ def plot_outputs_different_r(save = True):
 
             estimated_y = grnn.get_regression(foci_ips)        
             logger.collect_data()
-        plt.plot(logger.estimated_y, linewidth=1.4, label='d = {0}'.format(rs[j]))
+        plt.plot(logger.estimated_y, label='r = {0}'.format(rs[j]))
 
     plt.grid()
     ax = plt.subplot(111)
@@ -1363,6 +1363,48 @@ def plot_outputs_different_r(save = True):
 
     if save == True:
         plt.savefig(folder+'izlaz_razno_r.' + extension)
+    else:
+        plt.show()
+
+def plot_outputs_different_sigma(save = True):
+    N = 4000
+    sigmas = [0.1, 0.7, 2]    
+    plt.figure()
+
+    for j in range(len(sigmas)):
+        reset_all()
+        plant.set_noise_amplitude(30)
+        pbrc.set_distance_threshold(0.5)
+        pbrc.set_log_level(0)
+        grnn.set_sigma(sigmas[j])
+        grnn.set_cluster_radius(0.3)
+        plant.set_plant_type_x('5_foci_array')
+        plant.set_plant_type_y('linear')
+
+        for i in range(N):
+            data = plant.get_next_data()
+            x = data['x']    
+            y = data['y']
+
+            pbrc.iterate(x)
+            foci_ips = pbrc.get_foci_ips()
+
+            if y != None:
+                grnn.add_node(foci_ips, y)
+
+            estimated_y = grnn.get_regression(foci_ips)        
+            logger.collect_data()
+        plt.plot(logger.estimated_y, linewidth=1.0, label='σ = {0}'.format(sigmas[j]))
+
+    plt.grid()
+    ax = plt.subplot(111)
+    ax.legend(loc='lower center', bbox_to_anchor=(0.5, -0.024), ncol=2)
+    plt.title('Estimacija izlaza za različite vrednosti σ, r=0.3')
+    plt.xlabel('Vreme')
+    plt.ylabel('Vrednost izlaza')
+
+    if save == True:
+        plt.savefig(folder+'izlaz_razno_sigma_veliko_r.' + extension)
     else:
         plt.show()
 
@@ -1409,6 +1451,7 @@ def main():
     #plot_outputs_different_d()
     #plot_cluster_num_different_r()
     plot_outputs_different_r()
+    #plot_outputs_different_sigma(True)
 
 if __name__ == "__main__":
     main()
