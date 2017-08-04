@@ -22,8 +22,22 @@ x = []
 i = 0
 foci_appearance_moments = []
 
-def init_logger():
-    pass
+def reset():
+    global dim, last_foci_num, foci_num, foci_positions, foci_ips, cluster_num,\
+           total_node_num, real_y_t, real_y, estimated_y, x, i, foci_appearance_moments
+    dim = 2
+    last_foci_num = 0
+    foci_num = []
+    foci_positions = []
+    foci_ips = []
+    cluster_num = []
+    total_node_num = []
+    real_y_t = []
+    real_y = []
+    estimated_y = []
+    x = []
+    i = 0
+    foci_appearance_moments = []
 
 def collect_data():
     global i, last_foci_num

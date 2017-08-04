@@ -23,6 +23,7 @@ def reset_all():
     pbrc.reset()
     grnn.reset()
     plant.reset()
+    logger.reset()
 
 def test_plant():
     for i in range(100):
@@ -607,7 +608,7 @@ def analyze_grnn():
     grnn.add_node(np.array([3, 4, 5, 6, 7, 8]), 777)
     print(grnn.get_nodes_x())
 
-def test_dynamic_system_0_foci2():
+"""def test_dynamic_system_0_foci2():
     N = 4000
     pbrc.set_distance_threshold(0.5)
     pbrc.set_log_level(0)
@@ -628,7 +629,7 @@ def test_dynamic_system_0_foci2():
         estimated_y = grnn.get_regression(foci_ips)
         logger.collect_data()
 
-    logger.plot_to_file('results')
+    logger.plot_to_file('results')"""
 
 def test_cluster_adding_grnn():
     grnn.add_node([1], 10)
@@ -730,7 +731,7 @@ def plot_foci_movement(save = True):
             y_axis[k - foci_appearance_moments[j]] = foci_positions[k][j]
 
         for k in range(1):        
-            plt.plot(x_axis,y_axis[:,0], label="Fokus #{0}_x{1}".format(j, k))
+            plt.plot(x_axis,y_axis[:,0], linewidth=1.5, label="Fokus #{0}_x{1}".format(j, k))
 
     k = 0
     plt.ylim([-0.1, 4.1])
@@ -783,10 +784,11 @@ def plot_output_comparison(save = True):
 
     fig.set_canvas(plt.gcf().canvas)
     plt.title(u"Poređenje estimiranog i pravog izlaza")
-    plt.ylim([-2,48])
+    plt.ylim([-7,48])
     plt.plot(logger.estimated_y, label='Estimiran izlaz')
     plt.plot(logger.real_y_t, logger.real_y, 'o', label='Pravi izlaz')
-    plt.legend()
+    ax = plt.subplot(111)
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, 0.12), ncol=2)
     plt.xlabel('Vreme')
     plt.ylabel('Vrednost izlaza')
     plt.grid()
@@ -797,12 +799,12 @@ def plot_output_comparison(save = True):
     else:
         plt.show()
 
-def plot_mini_master():
+def plot_multiple(input_type = '5_foci_array'):
     N = 4000
     pbrc.set_distance_threshold(0.5)
     pbrc.set_log_level(0)
     grnn.set_sigma(0.5)
-    plant.set_plant_type_x('5_foci_array')
+    plant.set_plant_type_x(input_type)
     plant.set_plant_type_y('linear')
 
     for i in range(N):
@@ -826,12 +828,12 @@ def plot_mini_master():
     # style file is located in C:\Users\My_User_Name\.matplotlib\stylelib
     plt.style.use('master')
 
-
     plot_foci_num()
     plot_foci_starting_positions()
     plot_foci_movement()
     plot_node_cluster_num()
     plot_output_comparison()
+    plot_input_x1(input_type)
 
 def plot_grnn_example():
     plt.style.use('master')
@@ -941,9 +943,433 @@ def plot_grouping():
 
     plt.savefig(folder+'grnn_grupisanje.' + extension)
 
+def plot_input(input_type, limit = 1300):    
+    plant.set_plant_type_x(input_type)
+    N = limit
+    x = np.empty([2, N])
+
+    for i in range(N):
+        x[:, i] = plant.get_x(i)
+
+    mn = np.min(x)
+    mx = np.max(x)
+    rnge = mx-mn
+    grace = 0.1*rnge
+    ylimits = [mn - grace, mx + grace]
+
+    plt.subplot(211)
+    plt.title('Ulazna veličina x1')
+    plt.ylim(ylimits)
+    plt.grid()
+    plt.xlabel('Vreme')
+    plt.ylabel('x1')
+    plt.plot(x[0,:])
+
+    plt.subplot(212)
+    plt.title('Ulazna veličina x2')
+    plt.ylim(ylimits)
+    plt.grid()
+    plt.xlabel('Vreme')
+    plt.ylabel('x2')
+    plt.plot(x[1,:])
+
+    plt.tight_layout()
+    plt.show()
+   
+    #plt.savefig(folder+'input.png')
+
+def plot_input_x1(input_type, save = True, N = 1300):
+    plant.set_plant_type_x(input_type)
+    x = np.empty([N])
+
+    for i in range(N):
+        x[i] = plant.get_x(i)[0]
+
+    mn = np.min(x)
+    mx = np.max(x)
+    rnge = mx-mn
+    grace = 0.1*rnge
+    ylimits = [mn - grace, mx + grace]
+
+    plt.figure()
+    plt.plot(x)
+    plt.grid()
+    plt.ylim(ylimits)
+    plt.title('Ulazna funkcija procesa')
+    plt.xlabel('Vreme')
+    plt.ylabel('Vrednost ulaza za x1 i x2')
+    plt.tight_layout()
+
+    if save == True:
+        plt.savefig(folder+'ulazni_signal.' + extension)
+    else:
+        plt.show()
+
+def plot_error_histogram(save = True):
+    N = 4000
+    pbrc.set_distance_threshold(0.5)
+    pbrc.set_log_level(0)
+    grnn.set_sigma(0.5)
+    plant.set_plant_type_x('5_foci_array')
+
+    real_y_array = np.empty([N])
+    estimated_y_array = np.empty([N])
+
+    for i in range(N):
+        data = plant.get_next_data()
+        x = data['x']    
+        y = data['y']
+
+        pbrc.iterate(x)
+        foci_ips = pbrc.get_foci_ips()
+
+        if y != None:
+            grnn.add_node(foci_ips, y)
+
+        estimated_y = grnn.get_regression(foci_ips)
+        estimated_y_array[i] = estimated_y
+        real_y_array[i] = plant.get_y(x, False)
+
+        logger.collect_data()
+
+    abs_errors = np.abs(estimated_y_array - real_y_array)
+
+    plt.figure()
+    plt.hist(abs_errors, alpha=0.75)
+    plt.title("Raspodela apsolutne greške")
+    plt.xlabel("Apsolutna greška")
+    plt.ylabel("Broj odbiraka")
+    plt.grid()
+
+    if save == True:
+        plt.savefig(folder+'raspodela_greske.' + extension)
+    else:
+        plt.show()
+
+def plot_different_errors(save = True):
+    N = 4000
+    pbrc.set_distance_threshold(0.5)
+    pbrc.set_log_level(0)
+    grnn.set_sigma(0.5)
+    plant.set_plant_type_x('5_foci_array')
+
+    real_y_array = np.empty([N])
+    estimated_y_array = np.empty([N])
+
+    noise_amplitudes = [0, 5, 10, 15, 20]
+    mean_absolute_errors = np.empty(len(noise_amplitudes))
+
+    for j in range(len(noise_amplitudes)):
+        noise_amplitude = noise_amplitudes[j]
+        reset_all()
+        plant.set_noise_amplitude(noise_amplitude)
+
+        for i in range(N):
+            data = plant.get_next_data()
+            x = data['x']    
+            y = data['y']
+
+            pbrc.iterate(x)
+            foci_ips = pbrc.get_foci_ips()
+
+            if y != None:
+                grnn.add_node(foci_ips, y)
+
+            estimated_y = grnn.get_regression(foci_ips)
+            estimated_y_array[i] = estimated_y
+            real_y_array[i] = plant.get_y(x, False)
+
+            logger.collect_data()
+
+        abs_errors = np.abs(estimated_y_array - real_y_array)
+        mean_absolute_errors[j] = np.mean(abs_errors)
+
+    plt.figure()
+    plt.plot(noise_amplitudes, mean_absolute_errors, 
+             noise_amplitudes, mean_absolute_errors, 'go', markersize=10)
+    plt.title("Srednja apsolutna greška u zavisnosti od šuma")
+    plt.xlabel("Amplituda šuma")
+    plt.ylabel("Srednja apsolutna greška")
+    plt.grid()
+
+    if save == True:
+        plt.savefig(folder+'greske_sum.' + extension)
+    else:
+        plt.show()
+
+def plot_many_lambda(save = True):
+    lambdas = [0.1, 0.6, 0.9, 1]
+    coeff_num = 10
+    x = np.linspace(0,10, 100)
+
+    for lam in lambdas:
+        y = [lam** xx for xx in x]
+        plt.plot(x, y, linewidth=2.5, label = 'λ = {0}'.format(lam))
+
+    plt.title('Koeficijenti odbiraka za različite vrednosti λ')
+    plt.xlabel('Starost odbirka')
+    plt.ylabel('Koeficijent odbirka')
+    plt.ylim([-0.1, 1.1])
+    plt.xticks(np.arange(0,10))
+    plt.legend()
+    #plt.scatter(xses, yses, c='r', s=150, label='Podaci za obuku')    
+    #ax = plt.subplot(111)
+    #ax.legend(loc='upper right', bbox_to_anchor=(1, 0.4), ncol=1)
+    plt.grid()
+    plt.tight_layout()
+
+    if save == True:
+        plt.savefig(folder+'lambda_koeficijenti.' + extension)
+    else:
+        plt.show()
+
+def test_dynamic_system_0_foci2():
+    N = 4000
+    plant.set_noise_amplitude(20)
+    pbrc.set_distance_threshold(0.05)
+    pbrc.set_log_level(0)
+    grnn.set_sigma(0.5)
+    plant.set_plant_type_x('5_foci_array')
+    plant.set_plant_type_y('linear')
+
+    for i in range(N):
+        data = plant.get_next_data()
+        x = data['x']    
+        y = data['y']
+
+        pbrc.iterate(x)
+        foci_ips = pbrc.get_foci_ips()
+
+        if y != None:
+            grnn.add_node(foci_ips, y)
+
+        estimated_y = grnn.get_regression(foci_ips)
+        logger.collect_data()
+
+    #logger.plot_foci_num()
+    logger.plot_y()
+    #logger.plot_node_num()
+    #logger.plot_foci_x()
+    plt.show()
+
+def plot_different_lambda_whole(save = True):
+    N = 4000
+    lambdas = [0.999, 0.99, 0.5]
+    plt.figure()
+    for lam in reversed(lambdas):
+        reset_all()
+        plant.set_noise_amplitude(0)
+        pbrc.set_distance_threshold(0.5)
+        pbrc.set_log_level(0)
+        pbrc.set_lambda(lam)
+        grnn.set_sigma(0.5)
+        plant.set_plant_type_x('5_foci_array')
+        plant.set_plant_type_y('linear')
+
+        for i in range(N):
+            data = plant.get_next_data()
+            x = data['x']    
+            y = data['y']
+
+            pbrc.iterate(x)
+            foci_ips = pbrc.get_foci_ips()
+
+            if y != None:
+                grnn.add_node(foci_ips, y)
+
+            estimated_y = grnn.get_regression(foci_ips)        
+            logger.collect_data()
+        plt.plot(logger.estimated_y, linewidth=2, label='λ = {0}'.format(lam))
+
+    plt.grid()
+    ax = plt.subplot(111)
+    ax.legend(loc='upper right', bbox_to_anchor=(1, 0.3), ncol=1)
+    plt.title('Estimacija izlaza za različite vrednosti λ')
+    plt.xlabel('Vreme')
+    plt.ylabel('Vrednost izlaza')
+
+    if save == True:
+        plt.savefig(folder+'lambda_rezultati.' + extension)
+    else:
+        plt.show()
+
+def plot_foci_num_different_d(save = True):
+    N = 4000
+    ds = [2, 1.8, 1.6, 1.4, 1.2, 1.0, 0.8, 0.6, 0.4, 0.2]
+    foci_nums = []
+    plt.figure()
+
+    for d in ds:
+        reset_all()
+        plant.set_noise_amplitude(0)
+        pbrc.set_distance_threshold(d)
+        pbrc.set_log_level(0)
+        grnn.set_sigma(0.5)
+        plant.set_plant_type_x('5_foci_array')
+        plant.set_plant_type_y('linear')
+
+        for i in range(N):
+            data = plant.get_next_data()
+            x = data['x']    
+            y = data['y']
+
+            pbrc.iterate(x)
+            foci_ips = pbrc.get_foci_ips()
+
+            if y != None:
+                grnn.add_node(foci_ips, y)
+
+            estimated_y = grnn.get_regression(foci_ips)        
+            logger.collect_data()
+        foci_nums.append(pbrc.num_of_foci)
+
+    plt.grid()
+    plt.plot(ds, foci_nums)
+    plt.plot(ds, foci_nums, 'o', markersize=10)
+    #ax = plt.subplot(111)
+    #ax.legend(loc='upper right', bbox_to_anchor=(1, 0.3), ncol=1)
+    plt.title('Broj fokusa u sistemu za različite vrednosti d')
+    plt.xlabel('d')
+    plt.ylabel('Broj fokusa')
+
+    if save == True:
+        plt.savefig(folder+'broj_fokusa_od_d.' + extension)
+    else:
+        plt.show()
+
+def plot_outputs_different_d(save = True):
+    N = 4000
+    ds = [0.05, 2]
+    colours = ['b', 'r']
+    plt.figure()
+
+    for j in range(len(ds)):
+        reset_all()
+        plant.set_noise_amplitude(40)
+        pbrc.set_distance_threshold(ds[j])
+        pbrc.set_log_level(0)
+        grnn.set_sigma(0.5)
+        plant.set_plant_type_x('5_foci_array')
+        plant.set_plant_type_y('linear')
+
+        for i in range(N):
+            data = plant.get_next_data()
+            x = data['x']    
+            y = data['y']
+
+            pbrc.iterate(x)
+            foci_ips = pbrc.get_foci_ips()
+
+            if y != None:
+                grnn.add_node(foci_ips, y)
+
+            estimated_y = grnn.get_regression(foci_ips)        
+            logger.collect_data()
+        plt.plot(logger.estimated_y, linewidth=1.5, color = colours[j], label='d = {0}'.format(ds[j]))
+
+    plt.grid()
+    ax = plt.subplot(111)
+    ax.legend(loc='upper right', bbox_to_anchor=(1, 0.3), ncol=1)
+    plt.title('Estimacija izlaza za različite vrednosti d')
+    plt.xlabel('Vreme')
+    plt.ylabel('Vrednost izlaza')
+
+    if save == True:
+        plt.savefig(folder+'izlaz_razno_d.' + extension)
+    else:
+        plt.show()
+
+def plot_cluster_num_different_r(save = True):
+    N = 4000
+    rs = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0]
+    cluster_nums = []
+    plt.figure()
+
+    for r in rs:
+        reset_all()
+        plant.set_noise_amplitude(0)
+        pbrc.set_distance_threshold(0.5)
+        pbrc.set_log_level(0)
+        grnn.set_sigma(0.5)
+        grnn.set_cluster_radius(r)
+        plant.set_plant_type_x('5_foci_array')
+        plant.set_plant_type_y('linear')
+
+        for i in range(N):
+            data = plant.get_next_data()
+            x = data['x']    
+            y = data['y']
+
+            pbrc.iterate(x)
+            foci_ips = pbrc.get_foci_ips()
+
+            if y != None:
+                grnn.add_node(foci_ips, y)
+
+            estimated_y = grnn.get_regression(foci_ips)        
+            logger.collect_data()
+        cluster_nums.append(grnn.get_cluster_num())
+
+    plt.grid()
+    plt.plot(rs, cluster_nums)
+    plt.plot(rs, cluster_nums, 'o', markersize=10)
+    #ax = plt.subplot(111)
+    #ax.legend(loc='upper right', bbox_to_anchor=(1, 0.3), ncol=1)
+    plt.title('Broj grupa u GRNN-u za različite vrednosti r')
+    plt.xlabel('r')
+    plt.ylabel('Broj grupa')
+
+    if save == True:
+        plt.savefig(folder+'broj_grupa_od_r.' + extension)
+    else:
+        plt.show()
+
+def plot_outputs_different_r(save = True):
+    N = 4000
+    rs = [0.1, 0.7, 1.0, 1.7]    
+    plt.figure()
+
+    for j in range(len(rs)):
+        reset_all()
+        plant.set_noise_amplitude(20)
+        pbrc.set_distance_threshold(0.5)
+        pbrc.set_log_level(0)
+        grnn.set_sigma(0.5)
+        grnn.set_cluster_radius(rs[j])
+        plant.set_plant_type_x('5_foci_array')
+        plant.set_plant_type_y('linear')
+
+        for i in range(N):
+            data = plant.get_next_data()
+            x = data['x']    
+            y = data['y']
+
+            pbrc.iterate(x)
+            foci_ips = pbrc.get_foci_ips()
+
+            if y != None:
+                grnn.add_node(foci_ips, y)
+
+            estimated_y = grnn.get_regression(foci_ips)        
+            logger.collect_data()
+        plt.plot(logger.estimated_y, linewidth=1.4, label='d = {0}'.format(rs[j]))
+
+    plt.grid()
+    ax = plt.subplot(111)
+    ax.legend(loc='lower center', bbox_to_anchor=(0.5, -0.024), ncol=2)
+    plt.title('Estimacija izlaza za različite vrednosti r')
+    plt.xlabel('Vreme')
+    plt.ylabel('Vrednost izlaza')
+
+    if save == True:
+        plt.savefig(folder+'izlaz_razno_r.' + extension)
+    else:
+        plt.show()
+
 def main():
     random.seed(0)
     set_save_options('pdf', '../results/Master/')
+    plt.style.use('master')
 
     #test_plant()
     #test_pbrc()
@@ -968,10 +1394,21 @@ def main():
     #test_cluster_calculation_grnn()
     #test_dynamic_system_0_foci()
     #plot_linear_input()
-    #plot_mini_master()
+    #plot_multiple()
     #plot_grnn_example()
     #plot_grnn_example_multi_sigma()
-    plot_grouping()
+    #plot_grouping()
+    #plot_input('sqrt')
+    #plot_multiple()
+    #plot_error_histogram()
+    #plot_different_errors()
+    #plot_many_lambda()
+    #test_dynamic_system_0_foci2()
+    #plot_different_lambda_whole()
+    #plot_foci_num_different_d()
+    #plot_outputs_different_d()
+    #plot_cluster_num_different_r()
+    plot_outputs_different_r()
 
 if __name__ == "__main__":
     main()

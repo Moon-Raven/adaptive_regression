@@ -8,7 +8,7 @@ noise_amplitude = 0.05
 last_data = None
 
 # How is plant input determined
-# Options: 'random_2_foci', 'switch', '5_foci_array', 'zigzag'
+# Options: 'random_2_foci', 'switch', '5_foci_array', 'zigzag', 'sqrt'
 plant_type_x = '5_foci_array'
 
 # How is y determined based on given x
@@ -85,6 +85,29 @@ def get_x(counter):
             x1 = 2*xnum-tmp-1
             
         return xmin + dx*np.array([x1,x2])
+
+    elif plant_type_x == 'sqrt':
+        segment_len = 100
+        segment_num = 4
+        max_val = 4
+        min_val = 0
+
+        counter = counter % (segment_num*segment_len)
+        i = counter % segment_len
+
+        if counter < 1*segment_len:
+            x1 = min_val
+            x2 = min_val
+        elif counter < 2*segment_len:
+            x1 = (max_val-min_val) * i/segment_len
+            x2 = np.sqrt(x1)
+        elif counter < 3*segment_len:
+            x1 = max_val
+            x2 = np.sqrt(max_val)
+        elif counter < 4*segment_len:
+            x1 = max_val - (max_val-min_val) * i/segment_len
+            x2 = np.sqrt(x1)
+        x = np.array([x1,x2])
 
     return x
 

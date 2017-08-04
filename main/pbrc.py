@@ -115,11 +115,10 @@ def iterate(x):
         foci_ips[j] = distance2ip(new_distance)                
         old_foci_distances[j] = new_distance
 
+    log("Current IP: {0}, IP of highest focus {1} is {2}".format(current_ip, max(foci_ips), np.argmax(foci_ips)), 2)
+    
     # If current information potential is larger than IPs of all the foci, do something
-    if (current_ip > foci_ips).all() and foci_frozen == False:
-
-        if len(foci_ips) != 0:
-            log("Current IP: {0}, IP of highest focus {1} is {2}".format(current_ip, max(foci_ips), np.argmax(foci_ips)), 2)
+    if (current_ip > foci_ips).all() and foci_frozen == False:          
 
         # Find index of closest focus
         np_foci = np.array(foci)
