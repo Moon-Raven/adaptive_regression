@@ -101,9 +101,12 @@ def get_error(grnn_sigma, pbrc_lamda, pbrc_distance, grnn_cluster_radius):
 
     return np.mean(abs_errors)
 
-def simple_experiment():
-    pbrc.set_distance_threshold(0.1)
-    grnn.set_sigma(0.5)
+def simple_experiment(grnn_sigma, pbrc_lamda, pbrc_distance, grnn_cluster_radius):
+    pbrc.set_distance_threshold(pbrc_distance)
+    pbrc.set_distance_threshold(pbrc_distance)
+    grnn.set_cluster_radius(grnn_cluster_radius)
+    grnn.set_sigma(grnn_sigma)
+
     logger.set_use_plant(False)
 
     time_array = np.arange(TMAX)
@@ -153,18 +156,17 @@ def simple_experiment():
         abs_error = np.abs(e)
         integral += abs_error
 
-        if (t+1) % period == 0:
-            pbrc.iterate(np.squeeze(p))
-            foci_ips = pbrc.get_foci_ips()
+        pbrc.iterate(np.squeeze(p))
+        foci_ips = pbrc.get_foci_ips()
 
-            real_y = None
-            if (t+1) % big_period == 0:
-                grnn.add_node(foci_ips, integral)
-                real_y = integral
-
+        if (t+1) % period == 0:                        
+            grnn.add_node(foci_ips, integral)
             estimated_y = grnn.get_regression(foci_ips)
-            logger.collect_data(real_y)
+            logger.collect_data(integral)
             integral = 0
+        else:
+            estimated_y = grnn.get_regression(foci_ips)
+            logger.collect_data(None)
 
     #logger.plot_foci_num()
     logger.plot_y()
@@ -198,9 +200,42 @@ def simple_experiment():
 
     plt.show()
 
+def find_optimal_parameters():
+    #grnn_sigma, pbrc_lamda, pbrc_distance, grnn_cluster_radius
+    min_sigma, max_sigma = 0.05, 1
+    min_lambda, max_lambda = 0.4, 0.999
+    min_focus_distance, max_focus_distance = 0.05, 0.5
+    min_cluster_radius, max_cluster_radius = 0.05, 0.5
+
+    steps = 7
+
+    sigma_a = np.linspace(min_sigma, max_sigma, steps)
+    lambda_a = np.linspace(min_lambda, max_lambda, steps)
+    distance_a = np.linspace(min_focus_distance, max_focus_distance, steps)
+    radius_a = np.linspace(min_cluster_radius, max_cluster_radius, steps)
+    
+    search_space = np.stack(np.meshgrid(sigma_a, lambda_a, distance_a, radius_a), -1).reshape(-1, 4)
+
+    N = search_space.shape[0]
+    results = np.empty(N)
+
+    for i in range(N):
+        x = search_space[i]
+        results[i] = get_error(x[0], x[1], x[2], x[3])
+        print("{0} -> {1}".format(x, results[i]))
+
+    f = open('results.txt', 'w')
+    for i in range(N):
+        f.write("{0} -> {1}\n".format(search_space[i], results[i]))
+
+    min_ind = np.argmin(results)
+    f.write("Min: {0} -> {1}".format(search_space[min_ind], results[min_ind]))
+    f.close()
+
 def main():
-    print(get_error(0.5, 0.6, 0.1, 0.3))
-    simple_experiment(0.5, 0.6, 0.1, 0.3)
+    #print(get_error(0.5, 0.5, 0.5, 0.5))
+    #simple_experiment(0.5, 0.5, 0.5, 0.5)
+    find_optimal_parameters()
 
 if __name__ == "__main__":
     main()

@@ -6,6 +6,7 @@ __pycache__/
 # Custom
 Old/
 probe/
+results/
 
 # C extensions
 *.so
