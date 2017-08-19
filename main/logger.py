@@ -22,9 +22,17 @@ x = []
 i = 0
 foci_appearance_moments = []
 
+use_plant = True
+
+
+def set_use_plant(new_use_plant):
+    global use_plant
+    use_plant = new_use_plant
+
 def reset():
     global dim, last_foci_num, foci_num, foci_positions, foci_ips, cluster_num,\
-           total_node_num, real_y_t, real_y, estimated_y, x, i, foci_appearance_moments
+           total_node_num, real_y_t, real_y, estimated_y, x, i,\
+           foci_appearance_moments, use_plant
     dim = 2
     last_foci_num = 0
     foci_num = []
@@ -38,8 +46,9 @@ def reset():
     x = []
     i = 0
     foci_appearance_moments = []
+    use_plant = True
 
-def collect_data():
+def collect_data(new_real_y = None):
     global i, last_foci_num
 
     new_foci = pbrc.get_foci()
@@ -50,18 +59,21 @@ def collect_data():
         for j in range(new_foci_num-last_foci_num):
             foci_appearance_moments.append(i)
 
-
     foci_positions.append(np.copy(new_foci))
 
-    data = plant.get_last_data()
-    x.append(data['x'])
+    if use_plant == True:
+        data = plant.get_last_data()
+        x.append(data['x'])
 
-    if type(data['y']) != type(None):
-        real_y_t.append(i)
-        real_y.append(data['y'])
+        if type(data['y']) != type(None):
+            real_y_t.append(i)
+            real_y.append(data['y'])
+    else:
+        if type(new_real_y) != type(None):
+            real_y_t.append(i)
+            real_y.append(new_real_y)
 
     estimated_y.append(grnn.get_last_regression())
-
     cluster_num.append(grnn.get_cluster_num())
     total_node_num.append(grnn.get_total_node_num())
 
