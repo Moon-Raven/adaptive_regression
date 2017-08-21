@@ -1,6 +1,6 @@
 import pbrc
 import grnn
-import plant
+import example_plant as plant
 
 import numpy as np
 import matplotlib.pyplot as plt

@@ -1,6 +1,6 @@
 import pbrc
 import grnn
-import plant
+import example_plant as plant
 import logger
 import random
 
@@ -1450,7 +1450,7 @@ def main():
     #plot_foci_num_different_d()
     #plot_outputs_different_d()
     #plot_cluster_num_different_r()
-    plot_outputs_different_r()
+    #plot_outputs_different_r()
     #plot_outputs_different_sigma(True)
 
 if __name__ == "__main__":

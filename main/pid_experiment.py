@@ -15,6 +15,14 @@ TMAX = 3600*5
 period = minute
 big_period = 10 * period
 
+extension = '.pdf'
+folder = '../results/Master/'
+
+def set_save_options(image_extension, destination_folder):
+    global extension, folder
+    extension = image_extension
+    folder = destination_folder
+
 def get_a(t):
     amin = 0.2
     amax = 0.7
@@ -24,14 +32,10 @@ def get_a(t):
     s = np.sin(2*np.pi*f*t) + 1
     return (s*arange/2) + amin
 
-
-    return amin + t * arange/TMAX
-
 def get_b(t):
     bmin = 0.1
     bmax = 0.2
     brange = bmax - bmin
-
     return bmin + t * brange/TMAX
 
 def r(t):
@@ -44,6 +48,7 @@ def r(t):
 
     return ret_val
 
+# Return mean aboslute error of algorithm's performance for given meta-parameters
 def get_error(grnn_sigma, pbrc_lamda, pbrc_distance, grnn_cluster_radius):
     pbrc.set_distance_threshold(pbrc_distance)
     pbrc.set_distance_threshold(pbrc_distance)
@@ -53,7 +58,13 @@ def get_error(grnn_sigma, pbrc_lamda, pbrc_distance, grnn_cluster_radius):
     time_array = np.arange(TMAX)
     abs_errors = np.zeros(int(TMAX/period))
 
+    noise_sigma = 0.1
+    filter_alpha = 0.75
+
     up = 0
+    y_filtered_p = 0
+    u_filtered_p = 0
+    y_noised_p = 0
     yp = 0
     ep = 0
     
@@ -69,19 +80,30 @@ def get_error(grnn_sigma, pbrc_lamda, pbrc_distance, grnn_cluster_radius):
         a = get_a(t)
         b = get_b(t)
 
-        e = r(t-1) - yp
+        e = r(t-1) - y_noised_p
         u = up + 0.2/B0 * (e - A0 * ep)
         y = a * yp + b * up
         
-        # Kalman
-        x = np.array([[yp], [up]])
+        # Simulate noise in feedback loop
+        noise = noise_sigma * np.random.randn()
+        y_noised = y + noise
+
+        # Filter y and u for recursive least squares estimation
+        y_filtered = filter_alpha * y_filtered_p + (1-filter_alpha) * y_noised
+        u_filtered = filter_alpha * u_filtered_p + (1-filter_alpha) * u
+
+        # Recursive least squares estimation
+        x = np.array([[y_filtered_p], [u_filtered_p]])
         P = (P - ((P.dot(x).dot(x.T).dot(P)) / (kalman_lam+x.T.dot(P).dot(x))))/kalman_lam
-        p = p + P.dot(x).dot(y - x.T.dot(p))
+        p = p + P.dot(x).dot(y_filtered - x.T.dot(p))
 
         # Update variables
         yp = y
+        y_noised_p = y_noised
         up = u
         ep = e
+        y_filtered_p = y_filtered
+        u_filtered_p = u_filtered
         
         # Calculate error
         abs_error = np.abs(e)
@@ -91,7 +113,10 @@ def get_error(grnn_sigma, pbrc_lamda, pbrc_distance, grnn_cluster_radius):
         if (t+1) % period == 0:
             foci_ips = pbrc.get_foci_ips()
             real_y = integral
-            grnn.add_node(foci_ips, real_y)            
+
+            if (t+1) % big_period == 0:
+               grnn.add_node(foci_ips, real_y)        
+
             estimated_y = grnn.get_regression(foci_ips)
 
             abs_errors[period_counter] = np.abs(estimated_y - real_y)
@@ -101,7 +126,16 @@ def get_error(grnn_sigma, pbrc_lamda, pbrc_distance, grnn_cluster_radius):
 
     return np.mean(abs_errors)
 
-def simple_experiment(grnn_sigma, pbrc_lamda, pbrc_distance, grnn_cluster_radius):
+# Rune the experiment with given meta-parameters
+def simple_experiment(grnn_sigma, pbrc_lamda, pbrc_distance, grnn_cluster_radius,
+                      plot_results = False, save_plots = False, plot_estimations = False,
+                      plot_estimated_integral = False, plot_logger_results = False,
+                      plot_system_output = False):
+    
+    pbrc.reset()
+    grnn.reset()
+    logger.reset()
+
     pbrc.set_distance_threshold(pbrc_distance)
     pbrc.set_distance_threshold(pbrc_distance)
     grnn.set_cluster_radius(grnn_cluster_radius)
@@ -109,49 +143,80 @@ def simple_experiment(grnn_sigma, pbrc_lamda, pbrc_distance, grnn_cluster_radius
 
     logger.set_use_plant(False)
 
+    noise_sigma = 0.15
+    filter_alpha = 0.75
+
     time_array = np.arange(TMAX)
     y_array = np.empty(TMAX)
+    y_noised_array = np.empty(TMAX)
+    y_filtered_array = np.empty(TMAX)
     a_array = np.empty(TMAX)
     b_array = np.empty(TMAX)
     real_a_array = np.empty(TMAX)
     real_b_array = np.empty(TMAX)
+    estimated_integral_array = np.empty(TMAX)
+    real_integral_array_t = []
+    real_integral_array = []
 
     up = 0
     yp = 0
+    y_filtered_p = 0
+    u_filtered_p = 0
+    y_noised_p = 0
     ep = 0
     
     P = 0.5*np.eye(2)
-    p = np.array([[0],[0]])
+    pp = np.array([[0], [0]])
 
     integral = 0
 
     for i in range(TMAX):
         t = time_array[i]
 
+        # Fetch new process transfer function parameters
         a = get_a(t)
         b = get_b(t)
-
-        e = r(t-1) - yp
+        
+        # Regulate and simulate process
+        e = r(t-1) - y_noised_p
         u = up + 0.2/B0 * (e - A0 * ep)
         y = a * yp + b * up
-        
-        # Kalman
-        x = np.array([[yp], [up]])
-        P = (P - ((P.dot(x).dot(x.T).dot(P)) / (kalman_lam+x.T.dot(P).dot(x))))/kalman_lam
-        p = p + P.dot(x).dot(y - x.T.dot(p))
 
-        # Data logging
+        # Simulate noise in feedback loop
+        noise = noise_sigma * np.random.randn()
+        y_noised = y + noise
+
+        # Filter y and u for recursive least squares estimation
+        y_filtered = filter_alpha * y_filtered_p + (1-filter_alpha) * y_noised
+        u_filtered = filter_alpha * u_filtered_p + (1-filter_alpha) * u
+
+        # Recursive least squares estimation
+        x = np.array([[y_filtered_p], [u_filtered_p]])
+        P = (P - ((P.dot(x).dot(x.T).dot(P)) / (kalman_lam+x.T.dot(P).dot(x))))/kalman_lam
+        p = pp + P.dot(x).dot(y_filtered - x.T.dot(pp))
+
+        # Filter results to reduce noise
+        filter_coeff = 0.0 # filter off
+        p = filter_coeff * pp + (1-filter_coeff) * p
+
+        # Log data
         a_array[i] = p[0]
         b_array[i] = p[1]
+        y_noised_array[i] = y_noised
+        y_filtered_array[i] = y_filtered
         y_array[i] = y
         real_a_array[i] = a
         real_b_array[i] = b
 
         # Update variables
         yp = y
+        y_noised_p = y_noised
         up = u
         ep = e
-        
+        y_filtered_p = y_filtered
+        u_filtered_p = u_filtered
+        pp = p
+
         # Calculate errors
         abs_error = np.abs(e)
         integral += abs_error
@@ -159,72 +224,140 @@ def simple_experiment(grnn_sigma, pbrc_lamda, pbrc_distance, grnn_cluster_radius
         pbrc.iterate(np.squeeze(p))
         foci_ips = pbrc.get_foci_ips()
 
-        if (t+1) % period == 0:                        
-            grnn.add_node(foci_ips, integral)
-            estimated_y = grnn.get_regression(foci_ips)
-            logger.collect_data(integral)
+        if (t+1) % period == 0:        
+            
+            real_y = integral 
+      
+            if (t+1) % big_period == 0:
+               grnn.add_node(foci_ips, real_y)
+               data_for_logger = real_y  
+            else:
+                real_integral_array.append(real_y)
+                real_integral_array_t.append(t)
+                data_for_logger = None
+
+            estimated_integral = grnn.get_regression(foci_ips)
+            logger.collect_data(data_for_logger)
             integral = 0
         else:
-            estimated_y = grnn.get_regression(foci_ips)
+            estimated_integral = grnn.get_regression(foci_ips)
             logger.collect_data(None)
 
-    #logger.plot_foci_num()
-    logger.plot_y()
-    #logger.plot_node_num()
-    #logger.plot_foci_x()
+        # Log resulting estimation
+        estimated_integral_array[t] = estimated_integral
 
-    if False:
-        plt.figure()
-        plt.plot(y_array, label = 'y')
-        plt.grid()
-        plt.title('System output')
-        plt.draw()
+    # Draw plots if needed
+    if plot_results == True:
 
-    if False:
-        plt.figure()
-        plt.title('Estimation of A')
-        plt.plot(a_array, label = 'estimated a')
-        plt.plot(real_a_array, 'r', label = 'real a')
-        plt.legend()
-        plt.grid()
-        plt.draw()
+        
 
-    if False:
-        plt.figure()
-        plt.title('Estimation of B')
-        plt.plot(b_array, label = 'estimated b')
-        plt.plot(real_b_array, 'r', label = 'real b')
-        plt.legend()
-        plt.grid()
-        plt.draw()
+        if plot_logger_results == True:
+            logger.plot_foci_num()
+            logger.plot_y()
+            logger.plot_node_num()
+            logger.plot_foci_x()
 
-    plt.show()
+        if plot_estimated_integral == True:
+            plt.figure()
+            plt.grid()
+            plt.title('Estimacija integrala greške')
+            plt.xlabel('Vreme')
+            plt.ylabel('Integral greške')
+            plt.plot(estimated_integral_array[599:], label = 'Estimacija')
+            plt.plot(real_integral_array_t, real_integral_array, 'o',
+                     color = (0.7,0,0,0.75),label = 'Stvarna vrednost')
+            plt.plot(logger.real_y_t, logger.real_y, 'o',
+                     markersize = 14, label = 'Podaci za obuku')
+            
+            plt.legend()
 
-def find_optimal_parameters():
+            if save_plots == True:
+                plt.savefig(folder+'estimacja_integrala.' + extension)
+            else:
+                plt.show()
+
+        # Unnecessary
+        if False:
+            plt.figure()
+            plt.plot(y_noised_array, label = 'Noised measurements')
+            plt.plot(y_filtered_array, label = 'Filtered measurements')
+            plt.grid()
+            plt.legend()
+            plt.title('Filtering')
+            plt.draw()
+
+        if plot_system_output == True:
+            plt.figure()
+            plt.plot(y_array, label = 'y')
+            plt.grid()
+            plt.title('System output')
+            plt.draw()
+
+        if plot_estimations == True:
+            plt.figure()
+            plt.title('Estimacija parametra a')
+            plt.plot(a_array, label = 'Estimacija')
+            plt.plot(real_a_array, 'r', label = 'Stvarna vrednost')
+            plt.xlabel('Vreme')
+            plt.ylabel('a')
+            ax = plt.subplot(111)
+            ax.legend(loc='lower center', bbox_to_anchor=(0.5, -0.024), ncol=2)
+            plt.grid()
+
+            if save_plots == True:
+                plt.savefig(folder+'estimacija_a.' + extension)
+            else:
+                plt.show()
+
+            plt.figure()
+            plt.title('Estimacija parametra b')
+            plt.plot(b_array, label = 'Estimacija')
+            plt.plot(real_b_array, 'r', label = 'Stvarna vrednost')
+            plt.xlabel('Vreme')
+            plt.ylabel('b')
+            ax = plt.subplot(111)
+            ax.legend(loc='lower center', bbox_to_anchor=(0.5, -0.024), ncol=2)
+            plt.grid()
+
+            if save_plots == True:
+                plt.savefig(folder+'estimacija_b.' + extension)
+            else:
+                plt.show()
+
+        if save_plots == False:
+            plt.show()
+
+# Find optimal parameters for algorithm using grid search
+def find_optimal_parameters(output_file_name = 'results.txt'):
     #grnn_sigma, pbrc_lamda, pbrc_distance, grnn_cluster_radius
+
     min_sigma, max_sigma = 0.05, 1
-    min_lambda, max_lambda = 0.4, 0.999
+    #min_lambda, max_lambda = 0.4, 0.999 # Better specify exactly
     min_focus_distance, max_focus_distance = 0.05, 0.5
     min_cluster_radius, max_cluster_radius = 0.05, 0.5
 
-    steps = 7
+    steps = 3
 
     sigma_a = np.linspace(min_sigma, max_sigma, steps)
-    lambda_a = np.linspace(min_lambda, max_lambda, steps)
+    #lambda_a = np.linspace(min_lambda, max_lambda, steps) # Better specify exactly
+    lambda_a = np.array([0.5, 0.9, 0.99])
     distance_a = np.linspace(min_focus_distance, max_focus_distance, steps)
     radius_a = np.linspace(min_cluster_radius, max_cluster_radius, steps)
     
+    # Prepare grid of all combinations
     search_space = np.stack(np.meshgrid(sigma_a, lambda_a, distance_a, radius_a), -1).reshape(-1, 4)
 
     N = search_space.shape[0]
     results = np.empty(N)
 
+    # Test all combinations
     for i in range(N):
         x = search_space[i]
         results[i] = get_error(x[0], x[1], x[2], x[3])
         print("{0} -> {1}".format(x, results[i]))
 
-    f = open('results.txt', 'w')
+    # Write results to file
+    f = open(output_file_name, 'w')
     for i in range(N):
         f.write("{0} -> {1}\n".format(search_space[i], results[i]))
 
@@ -232,10 +365,96 @@ def find_optimal_parameters():
     f.write("Min: {0} -> {1}".format(search_space[min_ind], results[min_ind]))
     f.close()
 
+# Plot a and b transfer function parameters
+def plot_a_b(save = True):
+
+    a_array = np.empty(TMAX)
+    b_array = np.empty(TMAX)
+
+    for i in range(TMAX):
+        a_array[i] = get_a(i)
+        b_array[i] = get_b(i)
+
+    plt.subplot(2,1,1)
+    plt.title('Vrednost parametra a')
+    plt.xlabel('Vreme')
+    plt.ylabel('a')
+    plt.grid()
+    plt.plot(a_array)
+
+    plt.subplot(2,1,2)
+    plt.title('Vrednost parametra b')
+    plt.xlabel('Vreme')
+    plt.ylabel('b')
+    plt.grid()
+    plt.plot(b_array)
+
+    plt.tight_layout()
+
+    if save == True:
+        plt.savefig(folder+'a_b.' + extension)
+    else:
+        plt.show()
+
+# Plot reference input signal
+def plot_input(save = True):
+    r_array = np.empty(TMAX)
+
+    for i in range(TMAX):
+        r_array[i] = r(i)
+
+    plt.title('Vrednost ulazne reference')
+    plt.xlabel('Vreme')
+    plt.ylabel('r')
+    plt.grid()
+    plt.plot(r_array[0:400])
+    mn, mx = np.min(r_array), np.max(r_array)
+    rangee = mx - mn
+    grace = 0.1
+    plt.ylim(mn - grace*rangee, mx + grace * rangee)
+
+    if save == True:
+        plt.savefig(folder+'ulazna_referenca.' + extension)
+    else:
+        plt.show()
+
+# Plot estimations a and b transfer function parameters
+def plot_estimations_a_b(save = True):
+    simple_experiment(0.05, 0.99, 0.275, 0.05, True, save)
+
+# Plot the algorithm results
+def plot_estimated_integral(save_arg = True):
+    simple_experiment(0.05, 0.99, 0.275, 0.05, plot_results = True,
+                      save_plots = save_arg, plot_estimated_integral = True)
+
+# Make all plots
+def make_plots():
+    set_save_options('pdf', '../results/Master/')
+    plt.style.use('master')
+    plot_a_b()
+    plot_input()
+    plot_estimations_a_b()
+    plot_estimated_integral()
+
+# Different examples - uncomment and run program to try them
 def main():
     #print(get_error(0.5, 0.5, 0.5, 0.5))
-    #simple_experiment(0.5, 0.5, 0.5, 0.5)
-    find_optimal_parameters()
+
+    #simple_experiment( 0.05 , 0.5  , 0.5  , 0.05, plot_results=True,
+    #                 plot_estimated_integral=True)
+
+    #simple_experiment(0.05 , 0.9 ,  0.05 , 0.05, plot_results=True,
+    #                 plot_estimated_integral=True)
+
+    #simple_experiment(0.05 , 0.99 , 0.05 , 0.05, plot_results=True,
+    #                 plot_estimated_integral=True)
+
+    #simple_experiment(0.05 ,  0.99  , 0.275,  0.05, plot_results=True,
+    #                 plot_estimated_integral=True)
+
+    #find_optimal_parameters()
+    
+    #make_plots()
 
 if __name__ == "__main__":
     main()
