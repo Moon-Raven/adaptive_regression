@@ -39,7 +39,6 @@ def reset():
     foci_frozen = False
 
 
-
 # ***** Control functions *****
 
 # Static/global control variables
@@ -156,7 +155,6 @@ def iterate(x):
                 old_foci_distances[min_foci_ind] = 0
 
 
-
 # ***** Information fetching functions *****
 
 # Returns all foci
@@ -167,7 +165,6 @@ def get_foci_ips():
     np_distances = np.array(old_foci_distances)
     foci_ips = np.apply_along_axis(distance2ip, 0, np_distances)
     return foci_ips
-
 
 
 # ***** Utility functions *****
@@ -217,6 +214,7 @@ def distance(z1, z2):
     difference = z1 - z2;
     return np.sqrt(np.dot(difference, difference))
 
+# Calculates information potential based on given weighted average distance
 def distance2ip(focus_distance):
     return (1/(1+focus_distance))
 

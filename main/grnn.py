@@ -27,8 +27,6 @@ def reset():
     last_regression = None   
 
 
-
-
 # ***** Control functions*****
 
 # Global/static variables
@@ -125,7 +123,7 @@ def get_regression(x):
 
     node_num = len(cumul_cluster_outputs)
 
-    # If network doesn't have any nodes yet
+    # If network doesn't have any nodes yet, return zero
     if node_num == 0:
         return 0
 
@@ -146,8 +144,6 @@ def get_regression(x):
     last_regression = y
 
     return y
-
-
 
 
 # ***** Information fetching functions *****

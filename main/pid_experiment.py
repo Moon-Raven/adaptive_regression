@@ -23,6 +23,7 @@ def set_save_options(image_extension, destination_folder):
     extension = image_extension
     folder = destination_folder
 
+# Get a parameter for process transfer function
 def get_a(t):
     amin = 0.2
     amax = 0.7
@@ -32,12 +33,14 @@ def get_a(t):
     s = np.sin(2*np.pi*f*t) + 1
     return (s*arange/2) + amin
 
+# Get b parameter for process trasnfer function
 def get_b(t):
     bmin = 0.1
     bmax = 0.2
     brange = bmax - bmin
     return bmin + t * brange/TMAX
 
+# Get reference signal
 def r(t):
     tt = t % (2*period)
 
@@ -58,6 +61,7 @@ def get_error(grnn_sigma, pbrc_lamda, pbrc_distance, grnn_cluster_radius):
     time_array = np.arange(TMAX)
     abs_errors = np.zeros(int(TMAX/period))
 
+    # Set noise amplitude and filter coefficient
     noise_sigma = 0.1
     filter_alpha = 0.75
 
@@ -77,9 +81,11 @@ def get_error(grnn_sigma, pbrc_lamda, pbrc_distance, grnn_cluster_radius):
     for i in range(TMAX):
         t = time_array[i]
 
+        # Fetch new process transfer function parameters
         a = get_a(t)
         b = get_b(t)
 
+        # Regulate and simulate process
         e = r(t-1) - y_noised_p
         u = up + 0.2/B0 * (e - A0 * ep)
         y = a * yp + b * up
@@ -110,10 +116,13 @@ def get_error(grnn_sigma, pbrc_lamda, pbrc_distance, grnn_cluster_radius):
         integral += abs_error
 
         pbrc.iterate(np.squeeze(p))
+
+        # Check if one period of reference signal has passed
         if (t+1) % period == 0:
             foci_ips = pbrc.get_foci_ips()
             real_y = integral
 
+            # Check if 10 periods of reference signal has passed
             if (t+1) % big_period == 0:
                grnn.add_node(foci_ips, real_y)        
 
@@ -140,12 +149,13 @@ def simple_experiment(grnn_sigma, pbrc_lamda, pbrc_distance, grnn_cluster_radius
     pbrc.set_distance_threshold(pbrc_distance)
     grnn.set_cluster_radius(grnn_cluster_radius)
     grnn.set_sigma(grnn_sigma)
-
     logger.set_use_plant(False)
 
+    # Set noise amplitude and filter coefficient
     noise_sigma = 0.15
     filter_alpha = 0.75
 
+    # Initialize logging data
     time_array = np.arange(TMAX)
     y_array = np.empty(TMAX)
     y_noised_array = np.empty(TMAX)
@@ -224,10 +234,12 @@ def simple_experiment(grnn_sigma, pbrc_lamda, pbrc_distance, grnn_cluster_radius
         pbrc.iterate(np.squeeze(p))
         foci_ips = pbrc.get_foci_ips()
 
+        # Check if one period of reference signal has passed
         if (t+1) % period == 0:        
             
             real_y = integral 
       
+            # Check if 10 periods of reference have passed
             if (t+1) % big_period == 0:
                grnn.add_node(foci_ips, real_y)
                data_for_logger = real_y  
@@ -248,8 +260,6 @@ def simple_experiment(grnn_sigma, pbrc_lamda, pbrc_distance, grnn_cluster_radius
 
     # Draw plots if needed
     if plot_results == True:
-
-        
 
         if plot_logger_results == True:
             logger.plot_foci_num()
@@ -329,7 +339,8 @@ def simple_experiment(grnn_sigma, pbrc_lamda, pbrc_distance, grnn_cluster_radius
 
 # Find optimal parameters for algorithm using grid search
 def find_optimal_parameters(output_file_name = 'results.txt'):
-    #grnn_sigma, pbrc_lamda, pbrc_distance, grnn_cluster_radius
+    #Order of parameters:
+    # grnn_sigma, pbrc_lamda, pbrc_distance, grnn_cluster_radius
 
     min_sigma, max_sigma = 0.05, 1
     #min_lambda, max_lambda = 0.4, 0.999 # Better specify exactly
@@ -430,7 +441,7 @@ def plot_estimated_integral(save_arg = True):
 # Make all plots
 def make_plots():
     set_save_options('pdf', '../results/Master/')
-    plt.style.use('master')
+    #plt.style.use('master')
     plot_a_b()
     plot_input()
     plot_estimations_a_b()
@@ -449,8 +460,8 @@ def main():
     #simple_experiment(0.05 , 0.99 , 0.05 , 0.05, plot_results=True,
     #                 plot_estimated_integral=True)
 
-    #simple_experiment(0.05 ,  0.99  , 0.275,  0.05, plot_results=True,
-    #                 plot_estimated_integral=True)
+    simple_experiment(0.05 ,  0.99  , 0.275,  0.05, plot_results=True,
+                     plot_estimated_integral=True)
 
     #find_optimal_parameters()
     

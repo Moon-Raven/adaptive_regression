@@ -15,6 +15,8 @@ plant_type_x = '5_foci_array'
 # Options: 'peaks', 'linear'
 plant_type_y = 'linear'
 
+
+# Control functions
 def reset():
     global counter, last_data
     counter = 0
@@ -35,6 +37,7 @@ def set_y_period(new_period):
 def set_noise_amplitude(new_amplitude):
     global noise_amplitude
     noise_amplitude = new_amplitude
+
 
 # Represents input vector as a function of time (counter is a form of time)
 def get_x(counter):

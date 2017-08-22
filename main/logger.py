@@ -4,10 +4,10 @@ import example_plant as plant
 
 import numpy as np
 import matplotlib.pyplot as plt
-
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.font_manager import FontProperties
 
+# Logging variables
 dim = 2
 last_foci_num = 0
 foci_num = []
@@ -21,10 +21,9 @@ estimated_y = []
 x = []
 i = 0
 foci_appearance_moments = []
-
 use_plant = True
 
-
+# Set true if using example plant, set to false otherwise
 def set_use_plant(new_use_plant):
     global use_plant
     use_plant = new_use_plant
@@ -48,6 +47,8 @@ def reset():
     foci_appearance_moments = []
     use_plant = True
 
+# Control function which should be called on each algorithm iteration
+# Specify latest given y for training if not using example plant
 def collect_data(new_real_y = None):
     global i, last_foci_num
 
@@ -80,6 +81,7 @@ def collect_data(new_real_y = None):
     last_foci_num = new_foci_num
     i += 1
 
+# Plot the number of foci in PBRC
 def plot_foci_num(draw=True):
     plt.figure()
     plt.plot(foci_num)
@@ -90,6 +92,7 @@ def plot_foci_num(draw=True):
     if draw == True:
         plt.draw()
 
+# Plot estimation of system output
 def plot_y(draw=True):
     fig = plt.figure()
     fig.set_canvas(plt.gcf().canvas)
@@ -104,6 +107,7 @@ def plot_y(draw=True):
     if draw == True:
         plt.draw()
 
+# Plot node and cluster numbers in GRNN
 def plot_node_num(draw=True):
     plt.figure()
     
@@ -128,6 +132,7 @@ def plot_node_num(draw=True):
     if draw == True:
         plt.draw()
 
+# Plot focus positions
 def plot_foci_x(legend = False, draw=True):
     plt.figure()
 
@@ -160,6 +165,7 @@ def plot_foci_x(legend = False, draw=True):
     if draw == True:
         plt.draw()
 
+# Plot results to given file
 def plot_to_file(file_name):
     pp = PdfPages(file_name + '.pdf')
     print("Saving plots to file " + file_name + "...")
